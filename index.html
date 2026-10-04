@@ -1,0 +1,2061 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S.P.A.R.K. - Smart Photo Assessment & Recycling Keypoint</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#064e3b',
+                        },
+                        cyber: {
+                            dark: '#070a12',
+                            card: '#0f172a',
+                            border: '#1e293b',
+                            accent: '#06b6d4',
+                            violet: '#8b5cf6',
+                            amber: '#f59e0b',
+                            rose: '#f43f5e'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #070a12;
+            color: #f3f4f6;
+            overflow-x: hidden;
+        }
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Glassmorphism utility */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-panel-glow {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.15);
+        }
+        /* Scanning Laser Animation */
+        @keyframes scanline {
+            0% { top: 0%; opacity: 0.8; }
+            50% { opacity: 1; }
+            100% { top: 96%; opacity: 0.8; }
+        }
+        .scan-laser {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #10b981, #06b6d4, #10b981, transparent);
+            box-shadow: 0 0 15px #10b981, 0 0 30px #06b6d4;
+            animation: scanline 2.5s ease-in-out infinite alternate;
+            z-index: 20;
+        }
+        /* Pulsing Target Bracket */
+        @keyframes pulse-bracket {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.02); }
+        }
+        .hud-bracket {
+            animation: pulse-bracket 2s infinite ease-in-out;
+        }
+        /* Custom Ticker Scroll */
+        @keyframes ticker {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .ticker-animate {
+            display: inline-flex;
+            white-space: nowrap;
+            animation: ticker 35s linear infinite;
+        }
+        .ticker-animate:hover {
+            animation-play-state: paused;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #070a12;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #10b981;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between text-slate-100 selection:bg-brand-500 selection:text-black">
+
+    <!-- Top Global Announcement Bar & Community Ticker -->
+    <div class="bg-slate-950 border-b border-slate-800/80 text-xs py-2 overflow-hidden relative z-40">
+        <div class="max-w-7xl mx-mx-auto px-4 flex items-center justify-between">
+            <div class="flex items-center space-x-2 text-brand-500 font-mono font-semibold shrink-0 mr-4 bg-slate-900/90 px-2 py-0.5 rounded border border-brand-500/30">
+                <span class="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
+                <span>LIVE 4R IMPACT NETWORK</span>
+            </div>
+            
+            <div class="overflow-hidden flex-1 relative">
+                <div class="ticker-animate flex items-center space-x-12 text-slate-400 font-mono text-xs">
+                    <span class="flex items-center gap-1.5"><i data-lucide="shield-check" class="w-3.5 h-3.5 text-brand-500"></i> CPCB & R2 Certified Disposal Compliance Engine</span>
+                    <span class="flex items-center gap-1.5"><i data-lucide="recycle" class="w-3.5 h-3.5 text-cyan-400"></i> Total E-Waste Diverted: <strong class="text-slate-100" id="ticker-ewaste">14,820 kg</strong></span>
+                    <span class="flex items-center gap-1.5"><i data-lucide="leaf" class="w-3.5 h-3.5 text-emerald-400"></i> CO₂ Emissions Prevented: <strong class="text-slate-100" id="ticker-co2">98,450 kg</strong></span>
+                    <span class="flex items-center gap-1.5"><i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i> Gold Recovered: <strong class="text-slate-100" id="ticker-gold">412.5 g</strong></span>
+                    <span class="flex items-center gap-1.5"><i data-lucide="dollar-sign" class="w-3.5 h-3.5 text-emerald-400"></i> Cash Unlocked: <strong class="text-slate-100" id="ticker-cash">$284,500</strong></span>
+                    <!-- Duplicate for infinite marquee effect -->
+                    <span class="flex items-center gap-1.5"><i data-lucide="shield-check" class="w-3.5 h-3.5 text-brand-500"></i> CPCB & R2 Certified Disposal Compliance Engine</span>
+                    <span class="flex items-center gap-1.5"><i data-lucide="recycle" class="w-3.5 h-3.5 text-cyan-400"></i> Total E-Waste Diverted: <strong class="text-slate-100">14,820 kg</strong></span>
+                    <span class="flex items-center gap-1.5"><i data-lucide="leaf" class="w-3.5 h-3.5 text-emerald-400"></i> CO₂ Emissions Prevented: <strong class="text-slate-100">98,450 kg</strong></span>
+                </div>
+            </div>
+
+            <div class="hidden md:flex items-center space-x-3 shrink-0 ml-4 font-mono text-xs">
+                <button id="currency-toggle-btn" onclick="toggleCurrency()" class="px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300 hover:text-white transition hover:border-brand-500">
+                    Currency: <span id="currency-label" class="text-brand-500 font-bold">$ USD</span>
+                </button>
+                <button onclick="openApiKeyModal()" class="flex items-center gap-1 px-2.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-brand-400 border border-brand-500/30 transition">
+                    <i data-lucide="key" class="w-3 h-3"></i> Gemini API Key
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Navigation Header -->
+    <header class="sticky top-0 z-30 bg-cyber-dark/90 backdrop-blur-md border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo & Brand Badge -->
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('scanner')">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-brand-500/20 text-black font-extrabold text-xl">
+                        <i data-lucide="scan-line" class="w-6 h-6 text-slate-950"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xl font-black tracking-tight bg-gradient-to-r from-white via-slate-200 to-brand-400 bg-clip-text text-transparent">SPARK</span>
+                            <span class="px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/30">v3.1 4R Engine</span>
+                        </div>
+                        <p class="text-[11px] text-slate-400 hidden sm:block">Smart Photo Assessment & Recycling Keypoint</p>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="hidden lg:flex items-center space-x-1 font-medium text-sm">
+                    <button id="nav-scanner" onclick="switchTab('scanner')" class="nav-btn px-3 py-2 rounded-lg flex items-center gap-2 text-brand-400 bg-brand-500/10 border border-brand-500/30 font-semibold transition">
+                        <i data-lucide="camera" class="w-4 h-4"></i> AI Scanner
+                    </button>
+                    <button id="nav-matrix" onclick="switchTab('matrix')" class="nav-btn px-3 py-2 rounded-lg flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition">
+                        <i data-lucide="layout-grid" class="w-4 h-4"></i> 4R Decision Matrix
+                    </button>
+                    <button id="nav-upcycle" onclick="switchTab('upcycle')" class="nav-btn px-3 py-2 rounded-lg flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition">
+                        <i data-lucide="wrench" class="w-4 h-4"></i> Upcycle Studio
+                    </button>
+                    <button id="nav-vault" onclick="switchTab('vault')" class="nav-btn px-3 py-2 rounded-lg flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition relative">
+                        <i data-lucide="box" class="w-4 h-4"></i> My Drawer
+                        <span id="vault-count-badge" class="px-1.5 py-0.2 text-[10px] rounded-full bg-brand-500 text-slate-950 font-bold hidden">0</span>
+                    </button>
+                    <button id="nav-impact" onclick="switchTab('impact')" class="nav-btn px-3 py-2 rounded-lg flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition">
+                        <i data-lucide="trophy" class="w-4 h-4"></i> Impact & Badges
+                    </button>
+                    <button id="nav-locator" onclick="switchTab('locator')" class="nav-btn px-3 py-2 rounded-lg flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition">
+                        <i data-lucide="map-pin" class="w-4 h-4"></i> Repair & Recycle Hubs
+                    </button>
+                </nav>
+
+                <!-- Mobile menu toggle & Quick Scan Button -->
+                <div class="flex items-center space-x-2 lg:hidden">
+                    <button onclick="switchTab('scanner')" class="px-3 py-1.5 rounded-lg bg-brand-500 text-slate-950 font-bold text-xs flex items-center gap-1.5">
+                        <i data-lucide="camera" class="w-3.5 h-3.5"></i> Scan Gadget
+                    </button>
+                    <button id="mobile-menu-toggle" onclick="toggleMobileNav()" class="p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Navigation Drawer -->
+        <div id="mobile-nav" class="hidden lg:hidden border-t border-slate-800 bg-cyber-card px-4 py-3 space-y-2 text-sm font-medium">
+            <button onclick="switchTab('scanner'); toggleMobileNav()" class="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 text-brand-400 bg-slate-800">
+                <i data-lucide="camera" class="w-4 h-4"></i> AI Gadget Scanner
+            </button>
+            <button onclick="switchTab('matrix'); toggleMobileNav()" class="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 text-slate-300 hover:bg-slate-800">
+                <i data-lucide="layout-grid" class="w-4 h-4"></i> 4R Decision Matrix
+            </button>
+            <button onclick="switchTab('upcycle'); toggleMobileNav()" class="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 text-slate-300 hover:bg-slate-800">
+                <i data-lucide="wrench" class="w-4 h-4"></i> DIY Upcycle Studio
+            </button>
+            <button onclick="switchTab('vault'); toggleMobileNav()" class="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 text-slate-300 hover:bg-slate-800">
+                <i data-lucide="box" class="w-4 h-4"></i> E-Waste Vault & My Drawer
+            </button>
+            <button onclick="switchTab('impact'); toggleMobileNav()" class="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 text-slate-300 hover:bg-slate-800">
+                <i data-lucide="trophy" class="w-4 h-4"></i> Impact & Badges
+            </button>
+            <button onclick="switchTab('locator'); toggleMobileNav()" class="w-full text-left px-3 py-2 rounded-lg flex items-center gap-2 text-slate-300 hover:bg-slate-800">
+                <i data-lucide="map-pin" class="w-4 h-4"></i> Repair & Recycle Locator
+            </button>
+            <div class="pt-2 border-t border-slate-800 flex items-center justify-between font-mono text-xs text-slate-400">
+                <button onclick="toggleCurrency()" class="px-2 py-1 rounded bg-slate-800">Currency: <span class="text-brand-400 font-bold" id="mobile-currency-label">$ USD</span></button>
+                <button onclick="openApiKeyModal()" class="px-2 py-1 rounded bg-slate-800 text-brand-400">Gemini Key</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- ================= TAB 1: AI GADGET SCANNER ================= -->
+        <section id="tab-scanner" class="tab-content space-y-6">
+            <!-- Hero Header -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 glass-panel p-6 rounded-2xl border-l-4 border-l-brand-500">
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-white flex items-center gap-2">
+                        <span>AI Visual Diagnostics & 4R Engine</span>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-brand-500/20 text-brand-400 border border-brand-500/30">
+                            <i data-lucide="zap" class="w-3 h-3 mr-1 text-amber-400"></i> Instant Assessment
+                        </span>
+                    </h1>
+                    <p class="text-slate-400 text-sm mt-1">
+                        Snap or upload a photo of any forgotten tech. Our Computer Vision + Gemini AI identifies model, diagnoses damage, and calculates your best Resell, Repair, Reuse, or Recycle route.
+                    </p>
+                </div>
+                
+                <!-- Quick Demo Gadget Presets Selector -->
+                <div class="shrink-0 bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+                    <p class="text-xs font-mono text-slate-400 mb-2 flex items-center justify-between">
+                        <span>TEST WITH PRESET GADGETS:</span>
+                        <span class="text-[10px] text-brand-400">1-Click Demo</span>
+                    </p>
+                    <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                        <button onclick="loadDemoPreset('iphone_x')" class="preset-btn px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-brand-500/20 hover:border-brand-500 border border-slate-700 text-[11px] text-center transition flex flex-col items-center">
+                            <i data-lucide="smartphone" class="w-4 h-4 text-cyan-400 mb-0.5"></i>
+                            <span class="font-semibold text-slate-200">Cracked iPhone</span>
+                        </button>
+                        <button onclick="loadDemoPreset('galaxy_s9')" class="preset-btn px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-brand-500/20 hover:border-brand-500 border border-slate-700 text-[11px] text-center transition flex flex-col items-center">
+                            <i data-lucide="smartphone" class="w-4 h-4 text-emerald-400 mb-0.5"></i>
+                            <span class="font-semibold text-slate-200">Old Galaxy S9</span>
+                        </button>
+                        <button onclick="loadDemoPreset('ipad_mini')" class="preset-btn px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-brand-500/20 hover:border-brand-500 border border-slate-700 text-[11px] text-center transition flex flex-col items-center">
+                            <i data-lucide="tablet" class="w-4 h-4 text-violet-400 mb-0.5"></i>
+                            <span class="font-semibold text-slate-200">iPad Mini</span>
+                        </button>
+                        <button onclick="loadDemoPreset('sony_headphones')" class="preset-btn px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-brand-500/20 hover:border-brand-500 border border-slate-700 text-[11px] text-center transition flex flex-col items-center">
+                            <i data-lucide="headphones" class="w-4 h-4 text-amber-400 mb-0.5"></i>
+                            <span class="font-semibold text-slate-200">Sony Headphones</span>
+                        </button>
+                        <button onclick="loadDemoPreset('dell_laptop')" class="preset-btn px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-brand-500/20 hover:border-brand-500 border border-slate-700 text-[11px] text-center transition flex flex-col items-center">
+                            <i data-lucide="laptop" class="w-4 h-4 text-rose-400 mb-0.5"></i>
+                            <span class="font-semibold text-slate-200">Dell Laptop</span>
+                        </button>
+                        <button onclick="loadDemoPreset('swollen_phone')" class="preset-btn px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-rose-500/20 hover:border-rose-500 border border-rose-900/50 text-[11px] text-center transition flex flex-col items-center text-rose-300">
+                            <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-500 mb-0.5 animate-pulse"></i>
+                            <span class="font-semibold">Swollen Battery</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scanner Workspace (2 Columns) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Left Column: Camera Viewfinder / Upload Container & Animated HUD -->
+                <div class="lg:col-span-7 flex flex-col space-y-4">
+                    <div class="glass-panel p-4 rounded-2xl relative overflow-hidden flex flex-col items-center justify-center min-h-[420px]" id="scanner-view-container">
+                        
+                        <!-- High Tech Corner HUD Brackets -->
+                        <div class="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-brand-500 hud-bracket z-20"></div>
+                        <div class="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-brand-500 hud-bracket z-20"></div>
+                        <div class="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-brand-500 hud-bracket z-20"></div>
+                        <div class="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-brand-500 hud-bracket z-20"></div>
+
+                        <!-- Active Scanning Laser Effect (hidden by default) -->
+                        <div id="scan-laser-line" class="scan-laser hidden"></div>
+
+                        <!-- Video Feed Element for Live Camera -->
+                        <video id="webcam-feed" class="w-full h-full object-cover rounded-xl hidden absolute inset-0 z-0" autoplay playsinline muted></video>
+
+                        <!-- Preview Image Container -->
+                        <div id="image-preview-wrapper" class="relative w-full h-[360px] flex items-center justify-center rounded-xl bg-slate-950/80 overflow-hidden border border-slate-800">
+                            <!-- Default Empty State -->
+                            <div id="upload-placeholder" class="text-center p-6 space-y-4 cursor-pointer hover:text-brand-400 transition" onclick="triggerFileInput()">
+                                <div class="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-700 flex items-center justify-center mx-auto text-brand-500 shadow-xl">
+                                    <i data-lucide="cloud-upload" class="w-8 h-8"></i>
+                                </div>
+                                <div>
+                                    <p class="text-base font-semibold text-slate-200">Drop your gadget photo here or click to upload</p>
+                                    <p class="text-xs text-slate-400 mt-1">Supports JPG, PNG, WEBP • Max 10MB • Auto Model Detection</p>
+                                </div>
+                                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand-500/10 text-brand-400 text-xs font-mono font-semibold border border-brand-500/20">
+                                    <i data-lucide="camera" class="w-3.5 h-3.5"></i> Camera Input Enabled
+                                </div>
+                            </div>
+
+                            <!-- Rendered Preview Image -->
+                            <img id="scanned-image-preview" class="hidden w-full h-full object-contain p-2 relative z-10" alt="Scanned Gadget">
+
+                            <!-- Bounding Box Visualizer for Detected Object -->
+                            <div id="hud-bounding-box" class="hidden absolute border-2 border-dashed border-cyan-400 bg-cyan-500/10 rounded-lg z-20 transition-all duration-500 pointer-events-none">
+                                <div class="absolute -top-7 left-0 bg-cyan-950/90 text-cyan-300 font-mono text-[10px] px-2 py-0.5 rounded border border-cyan-500/40 flex items-center gap-1.5 shadow-lg">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
+                                    <span id="hud-detected-tag">DETECTED: iPhone X (64GB)</span>
+                                    <span class="text-emerald-400 font-bold" id="hud-confidence">98.4%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- File Input Element -->
+                        <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
+
+                        <!-- HUD Diagnostic Control Buttons -->
+                        <div class="flex flex-wrap items-center justify-between w-full mt-4 gap-2 z-20">
+                            <div class="flex items-center space-x-2">
+                                <button onclick="triggerFileInput()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 flex items-center gap-1.5 transition">
+                                    <i data-lucide="upload" class="w-3.5 h-3.5 text-brand-400"></i> Choose File
+                                </button>
+                                <button id="webcam-btn" onclick="toggleWebcam()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 flex items-center gap-1.5 transition">
+                                    <i data-lucide="video" class="w-3.5 h-3.5 text-cyan-400"></i> <span id="webcam-btn-text">Start Camera</span>
+                                </button>
+                            </div>
+
+                            <button id="run-ai-btn" onclick="executeAIScan()" class="px-5 py-2 rounded-xl bg-gradient-to-r from-brand-500 via-emerald-500 to-cyan-500 hover:from-brand-600 hover:to-cyan-600 text-slate-950 font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-brand-500/25 transition transform active:scale-95">
+                                <i data-lucide="cpu" class="w-4 h-4"></i> Run AI Assessment
+                            </button>
+                        </div>
+
+                    </div>
+
+                    <!-- Scan Progress & Safety Warnings -->
+                    <div id="safety-alert-banner" class="hidden bg-rose-950/60 border border-rose-500/50 rounded-xl p-3.5 flex items-start gap-3 text-xs text-rose-200 animate-pulse">
+                        <i data-lucide="alert-octagon" class="w-5 h-5 text-rose-400 shrink-0 mt-0.5"></i>
+                        <div>
+                            <p class="font-bold text-rose-300">HAZARD WARNING: Swollen Lithium Battery Detected!</p>
+                            <p class="text-rose-200/80 mt-0.5">Physical deformation or puncture risk present. Do NOT squeeze, attempt to repair, or ship via standard post. Recommended Route: Certified CPCB Hazardous E-Waste Pickup.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Visual Damage Diagnostic Sliders & Radar Diagnostic Chart -->
+                <div class="lg:col-span-5 flex flex-col space-y-4">
+                    <!-- Condition Diagnostic Manual Adjustment Panel -->
+                    <div class="glass-panel p-5 rounded-2xl space-y-4">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="sliders" class="w-4 h-4 text-brand-400"></i>
+                                <h3 class="font-bold text-sm text-slate-100">Visual Damage & Health Diagnostics</h3>
+                            </div>
+                            <span class="text-[10px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">AI Verified</span>
+                        </div>
+
+                        <!-- Diagnostic Sliders -->
+                        <div class="space-y-3.5 text-xs">
+                            <div>
+                                <div class="flex justify-between font-mono mb-1">
+                                    <span class="text-slate-300">Screen Damage / Cracks</span>
+                                    <span class="text-brand-400 font-bold" id="slider-screen-val">45%</span>
+                                </div>
+                                <input type="range" id="slider-screen" min="0" max="100" value="45" oninput="updateDiagnosticsFromSliders()" class="w-full accent-brand-500 bg-slate-800 rounded-lg h-1.5 cursor-pointer">
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between font-mono mb-1">
+                                    <span class="text-slate-300">Body / Housing Wear</span>
+                                    <span class="text-cyan-400 font-bold" id="slider-wear-val">30%</span>
+                                </div>
+                                <input type="range" id="slider-wear" min="0" max="100" value="30" oninput="updateDiagnosticsFromSliders()" class="w-full accent-cyan-400 bg-slate-800 rounded-lg h-1.5 cursor-pointer">
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between font-mono mb-1">
+                                    <span class="text-slate-300">Estimated Battery Health</span>
+                                    <span class="text-amber-400 font-bold" id="slider-battery-val">72%</span>
+                                </div>
+                                <input type="range" id="slider-battery" min="10" max="100" value="72" oninput="updateDiagnosticsFromSliders()" class="w-full accent-amber-400 bg-slate-800 rounded-lg h-1.5 cursor-pointer">
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between font-mono mb-1">
+                                    <span class="text-slate-300">Port & Button Functionality</span>
+                                    <span class="text-violet-400 font-bold" id="slider-port-val">85%</span>
+                                </div>
+                                <input type="range" id="slider-port" min="0" max="100" value="85" oninput="updateDiagnosticsFromSliders()" class="w-full accent-violet-400 bg-slate-800 rounded-lg h-1.5 cursor-pointer">
+                            </div>
+                        </div>
+
+                        <!-- Condition Radar Visualization -->
+                        <div class="pt-2 border-t border-slate-800 flex items-center justify-center relative">
+                            <div class="w-full h-44">
+                                <canvas id="diagnosticRadarChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Summary Badge & Direct Action Launcher -->
+                    <div class="glass-panel-glow p-4 rounded-2xl flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Engine Decision Output</span>
+                            <h4 id="summary-best-route-title" class="text-base font-bold text-brand-400 flex items-center gap-1.5 mt-0.5">
+                                <i data-lucide="check-circle-2" class="w-4 h-4"></i> Optimal Route: RESELL
+                            </h4>
+                            <p id="summary-best-route-desc" class="text-xs text-slate-300 mt-1">
+                                Est. Market Value: <strong id="summary-est-val" class="text-white">$145 USD</strong>
+                            </p>
+                        </div>
+                        <button onclick="switchTab('matrix')" class="px-4 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md transition">
+                            Explore 4R Matrix <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: 4R DECISION MATRIX ENGINE ================= -->
+        <section id="tab-matrix" class="tab-content hidden space-y-6">
+            
+            <!-- Matrix Header & Active Device Spotlight -->
+            <div class="glass-panel p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 border-l-cyan-500">
+                <div>
+                    <div class="flex items-center gap-2 font-mono text-xs text-cyan-400">
+                        <i data-lucide="cpu" class="w-4 h-4"></i> REAL-TIME 4R EVALUATION ENGINE
+                    </div>
+                    <h2 class="text-2xl font-extrabold text-white mt-1" id="matrix-gadget-title">Active Device: Apple iPhone X (64GB)</h2>
+                    <p class="text-xs text-slate-400 mt-0.5">Comparing financial payout, repair feasibility, DIY potential, and CPCB recycling benefits.</p>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button onclick="saveActiveDeviceToVault()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-brand-400 border border-brand-500/30 flex items-center gap-1.5 transition">
+                        <i data-lucide="bookmark" class="w-4 h-4"></i> Save to My Drawer
+                    </button>
+                    <button onclick="switchTab('scanner')" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 border border-slate-700 flex items-center gap-1.5 transition">
+                        <i data-lucide="camera" class="w-4 h-4"></i> Scan Another
+                    </button>
+                </div>
+            </div>
+
+            <!-- 4R Matrix Cards Grid (2x2) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <!-- CARD 1: RESELL -->
+                <div id="card-route-resell" class="glass-panel p-6 rounded-2xl relative flex flex-col justify-between border-2 transition duration-300">
+                    <div class="space-y-4">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-bold">
+                                    <i data-lucide="dollar-sign" class="w-6 h-6"></i>
+                                </div>
+                                <div>
+                                    <span class="text-xs font-mono text-slate-400 uppercase">Route #1</span>
+                                    <h3 class="text-lg font-bold text-white">RESELL & BUYBACK</h3>
+                                </div>
+                            </div>
+                            <span id="badge-resell-status" class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">BEST CASH</span>
+                        </div>
+
+                        <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2">
+                            <p class="text-xs text-slate-400">Estimated Instant Buyback Valuation</p>
+                            <p class="text-2xl font-extrabold text-emerald-400 font-mono" id="resell-val-display">$145.00 <span class="text-xs text-slate-400 font-normal">USD</span></p>
+                            <p class="text-[11px] text-slate-400">Market demand high for certified refurbished displays & logic boards.</p>
+                        </div>
+
+                        <!-- Platform Breakdown -->
+                        <div class="space-y-2">
+                            <p class="text-xs font-semibold text-slate-300">Live Platform Price Match:</p>
+                            <div class="space-y-1.5 text-xs font-mono">
+                                <div class="flex justify-between items-center p-2 rounded bg-slate-900/80 border border-slate-800">
+                                    <span class="text-slate-300 flex items-center gap-1.5"><i data-lucide="shopping-bag" class="w-3.5 h-3.5 text-emerald-400"></i> Cashify / Buyback Direct</span>
+                                    <span class="font-bold text-emerald-400" id="resell-price-cashify">$145</span>
+                                </div>
+                                <div class="flex justify-between items-center p-2 rounded bg-slate-900/80 border border-slate-800">
+                                    <span class="text-slate-300 flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-cyan-400"></i> BackMarket Refurbished</span>
+                                    <span class="font-bold text-slate-200" id="resell-price-backmarket">$138</span>
+                                </div>
+                                <div class="flex justify-between items-center p-2 rounded bg-slate-900/80 border border-slate-800">
+                                    <span class="text-slate-300 flex items-center gap-1.5"><i data-lucide="globe" class="w-3.5 h-3.5 text-amber-400"></i> eBay Marketplace</span>
+                                    <span class="font-bold text-slate-200" id="resell-price-ebay">$152 (Private)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 mt-4 border-t border-slate-800 flex items-center gap-2">
+                        <button onclick="openBuybackModal()" class="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition">
+                            <i data-lucide="lock" class="w-3.5 h-3.5"></i> Lock In Buyback Price
+                        </button>
+                        <button onclick="triggerPriceAlert()" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition" title="Price Alert">
+                            <i data-lucide="bell" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CARD 2: REPAIR -->
+                <div id="card-route-repair" class="glass-panel p-6 rounded-2xl relative flex flex-col justify-between border-2 transition duration-300">
+                    <div class="space-y-4">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 flex items-center justify-center font-bold">
+                                    <i data-lucide="wrench" class="w-6 h-6"></i>
+                                </div>
+                                <div>
+                                    <span class="text-xs font-mono text-slate-400 uppercase">Route #2</span>
+                                    <h3 class="text-lg font-bold text-white">REPAIR & RESTORE</h3>
+                                </div>
+                            </div>
+                            <span id="badge-repair-status" class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/40">FEASIBLE</span>
+                        </div>
+
+                        <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <p class="text-xs text-slate-400">Est. Repair Cost</p>
+                                <p class="text-xs text-slate-400">Vs Replacement Val</p>
+                            </div>
+                            <div class="flex justify-between items-baseline font-mono">
+                                <p class="text-xl font-extrabold text-cyan-400" id="repair-cost-display">$65.00</p>
+                                <p class="text-sm font-semibold text-slate-300" id="repair-vs-replace-display">$450.00 New</p>
+                            </div>
+                            <!-- Repair vs Replace Gauge Bar -->
+                            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mt-1">
+                                <div id="repair-ratio-bar" class="bg-cyan-400 h-full rounded-full" style="width: 18%;"></div>
+                            </div>
+                            <p class="text-[10px] text-slate-400 font-mono" id="repair-ratio-label">Repair cost is only 14% of replacement value. Highly recommended!</p>
+                        </div>
+
+                        <!-- Repair Options -->
+                        <div class="space-y-2">
+                            <p class="text-xs font-semibold text-slate-300">Estimated Component Breakdown:</p>
+                            <ul class="text-xs text-slate-300 space-y-1 list-disc list-inside font-mono" id="repair-breakdown-list">
+                                <li>OLED Screen Replacement: $45</li>
+                                <li>Battery Calibration: $20</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 mt-4 border-t border-slate-800 flex items-center gap-2">
+                        <button onclick="openRepairShopModal()" class="flex-1 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition">
+                            <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> Find Verified Local Shops
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CARD 3: REUSE / UPCYCLE -->
+                <div id="card-route-reuse" class="glass-panel p-6 rounded-2xl relative flex flex-col justify-between border-2 transition duration-300">
+                    <div class="space-y-4">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-xl bg-violet-500/20 text-violet-400 border border-violet-500/40 flex items-center justify-center font-bold">
+                                    <i data-lucide="sparkles" class="w-6 h-6"></i>
+                                </div>
+                                <div>
+                                    <span class="text-xs font-mono text-slate-400 uppercase">Route #3</span>
+                                    <h3 class="text-lg font-bold text-white">REUSE & DIY UPCYCLE</h3>
+                                </div>
+                            </div>
+                            <span id="badge-reuse-status" class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-violet-500/20 text-violet-400 border border-violet-500/40">HIGH CREATIVE VALUE</span>
+                        </div>
+
+                        <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2">
+                            <p class="text-xs text-slate-400">Tailored DIY Project</p>
+                            <p class="text-base font-bold text-violet-300 flex items-center gap-1.5" id="upcycle-project-name">
+                                <i data-lucide="video" class="w-4 h-4 text-violet-400"></i> Smart Home Security & Cam System
+                            </p>
+                            <p class="text-xs text-slate-300" id="upcycle-project-desc">
+                                Convert camera & Wi-Fi module into an AI motion-detecting security camera with zero cloud fees.
+                            </p>
+                        </div>
+
+                        <div class="space-y-2 text-xs">
+                            <p class="text-slate-300 font-semibold">Key Requirements:</p>
+                            <div class="flex flex-wrap gap-1.5" id="upcycle-tags">
+                                <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300 font-mono text-[10px]">Alfred Cam / IP Webcam App</span>
+                                <span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300 font-mono text-[10px]">Wall Mount Bracket</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 mt-4 border-t border-slate-800 flex items-center gap-2">
+                        <button onclick="launchStudioProjectFromMatrix()" class="flex-1 py-2.5 rounded-xl bg-violet-500 hover:bg-violet-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition">
+                            <i data-lucide="play" class="w-3.5 h-3.5"></i> Open Step-By-Step DIY Guide
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CARD 4: RECYCLE -->
+                <div id="card-route-recycle" class="glass-panel p-6 rounded-2xl relative flex flex-col justify-between border-2 transition duration-300">
+                    <div class="space-y-4">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center font-bold">
+                                    <i data-lucide="recycle" class="w-6 h-6"></i>
+                                </div>
+                                <div>
+                                    <span class="text-xs font-mono text-slate-400 uppercase">Route #4</span>
+                                    <h3 class="text-lg font-bold text-white">RECYCLE (CPCB / R2)</h3>
+                                </div>
+                            </div>
+                            <span id="badge-recycle-status" class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40">100% ZERO-LANDFILL</span>
+                        </div>
+
+                        <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2">
+                            <p class="text-xs text-slate-400">Guaranteed Ecological Offset</p>
+                            <div class="grid grid-cols-2 gap-2 font-mono text-xs">
+                                <div class="p-2 rounded bg-slate-900 border border-slate-800 text-emerald-400">
+                                    <span class="text-slate-400 block text-[10px]">CO₂ Saved</span>
+                                    <strong id="recycle-co2-val">34.2 kg</strong>
+                                </div>
+                                <div class="p-2 rounded bg-slate-900 border border-slate-800 text-amber-400">
+                                    <span class="text-slate-400 block text-[10px]">Gold Recovered</span>
+                                    <strong id="recycle-gold-val">0.035 g</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1 text-xs text-slate-300">
+                            <p class="flex items-center gap-1.5"><i data-lucide="shield-check" class="w-3.5 h-3.5 text-brand-400"></i> Doorstep Pickup by CPCB-authorized Recyclers</p>
+                            <p class="flex items-center gap-1.5"><i data-lucide="file-check" class="w-3.5 h-3.5 text-cyan-400"></i> Issues Official Destruction & Circularity Certificate</p>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 mt-4 border-t border-slate-800 flex items-center gap-2">
+                        <button onclick="openRecyclePickupModal()" class="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition">
+                            <i data-lucide="truck" class="w-3.5 h-3.5"></i> Schedule Doorstep Pickup
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ================= TAB 3: UPCYCLE DIY STUDIO ================= -->
+        <section id="tab-upcycle" class="tab-content hidden space-y-6">
+            <div class="glass-panel p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 border-l-violet-500">
+                <div>
+                    <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">
+                        <i data-lucide="wrench" class="w-6 h-6 text-violet-400"></i> DIY Gadget Upcycling Studio
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">Transform obsolete electronics into high-value smart home hubs, security cameras, dashcams, and home servers.</p>
+                </div>
+                <div class="flex items-center gap-2 font-mono text-xs">
+                    <span class="px-3 py-1 rounded-lg bg-violet-500/20 text-violet-300 border border-violet-500/40">10+ Verified Blueprint Guides</span>
+                </div>
+            </div>
+
+            <!-- DIY Projects Workspace -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left Column: Blueprint Selector Cards -->
+                <div class="lg:col-span-5 space-y-3">
+                    <h3 class="text-xs font-mono text-slate-400 uppercase tracking-wider">Select Transformation Blueprint:</h3>
+                    
+                    <div onclick="selectDIYProject('smart_cam')" id="diy-card-smart_cam" class="diy-selector-card glass-panel p-4 rounded-xl border border-violet-500/50 cursor-pointer hover:border-violet-400 transition flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-violet-500/20 text-violet-400 flex items-center justify-center shrink-0">
+                            <i data-lucide="video" class="w-5 h-5"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-sm text-white">Smart Home AI Security Camera</h4>
+                            <p class="text-xs text-slate-400 mt-0.5">Suitable for old Android/iOS smartphones. Continuous HD feed + motion alerts.</p>
+                            <span class="mt-2 inline-block px-2 py-0.5 rounded text-[10px] font-mono bg-slate-900 text-violet-300 border border-slate-800">Difficulty: Easy • 15 Mins</span>
+                        </div>
+                    </div>
+
+                    <div onclick="selectDIYProject('desk_hud')" id="diy-card-desk_hud" class="diy-selector-card glass-panel p-4 rounded-xl border border-slate-800 cursor-pointer hover:border-violet-400 transition flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0">
+                            <i data-lucide="layout" class="w-5 h-5"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-sm text-white">Dedicated Weather & Calendar Wall HUD</h4>
+                            <p class="text-xs text-slate-400 mt-0.5">Ideal for old iPads or Android tablets. Displays live weather, calendar, and smart switches.</p>
+                            <span class="mt-2 inline-block px-2 py-0.5 rounded text-[10px] font-mono bg-slate-900 text-cyan-300 border border-slate-800">Difficulty: Easy • 20 Mins</span>
+                        </div>
+                    </div>
+
+                    <div onclick="selectDIYProject('home_nas')" id="diy-card-home_nas" class="diy-selector-card glass-panel p-4 rounded-xl border border-slate-800 cursor-pointer hover:border-violet-400 transition flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                            <i data-lucide="hard-drive" class="w-5 h-5"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-sm text-white">Personal Cloud NAS & Media Server</h4>
+                            <p class="text-xs text-slate-400 mt-0.5">Suitable for old laptops. Run Nextcloud/OpenMediaVault for automated home backup.</p>
+                            <span class="mt-2 inline-block px-2 py-0.5 rounded text-[10px] font-mono bg-slate-900 text-emerald-300 border border-slate-800">Difficulty: Medium • 45 Mins</span>
+                        </div>
+                    </div>
+
+                    <div onclick="selectDIYProject('car_dashcam')" id="diy-card-car_dashcam" class="diy-selector-card glass-panel p-4 rounded-xl border border-slate-800 cursor-pointer hover:border-violet-400 transition flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                            <i data-lucide="car" class="w-5 h-5"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-sm text-white">Auto-Loop Vehicle Dashcam</h4>
+                            <p class="text-xs text-slate-400 mt-0.5">Turn old phone into dashcam with GPS speed logging and automatic impact clip saving.</p>
+                            <span class="mt-2 inline-block px-2 py-0.5 rounded text-[10px] font-mono bg-slate-900 text-amber-300 border border-slate-800">Difficulty: Easy • 10 Mins</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Interactive Step-By-Step Execution Guide -->
+                <div class="lg:col-span-7">
+                    <div class="glass-panel p-6 rounded-2xl space-y-6" id="diy-guide-container">
+                        <!-- Dynamic Project Content Rendered Here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 4: E-WASTE VAULT & MY DRAWER ================= -->
+        <section id="tab-vault" class="tab-content hidden space-y-6">
+            <div class="glass-panel p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 border-l-brand-500">
+                <div>
+                    <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">
+                        <i data-lucide="box" class="w-6 h-6 text-brand-400"></i> My E-Waste Drawer & Portfolio
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">Track forgotten gadgets sitting in your drawers. Monitor unlocked cash and environmental savings.</p>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <button onclick="exportVaultSummaryReport()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-brand-400 border border-brand-500/30 flex items-center gap-1.5 transition">
+                        <i data-lucide="download" class="w-4 h-4"></i> Export Eco Certificate
+                    </button>
+                    <button onclick="openAddManualGadgetModal()" class="px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Add Gadget Manually
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary Financial Stat Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
+                <div class="glass-panel p-4 rounded-xl border border-slate-800">
+                    <span class="text-xs text-slate-400">TOTAL GADGETS IN VAULT</span>
+                    <p class="text-2xl font-extrabold text-white mt-1" id="vault-stat-count">0</p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border border-slate-800">
+                    <span class="text-xs text-slate-400">UNLOCKED CASH POTENTIAL</span>
+                    <p class="text-2xl font-extrabold text-emerald-400 mt-1" id="vault-stat-cash">$0</p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border border-slate-800">
+                    <span class="text-xs text-slate-400">TOTAL CO₂ PREVENTED</span>
+                    <p class="text-2xl font-extrabold text-cyan-400 mt-1" id="vault-stat-co2">0 kg</p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border border-slate-800">
+                    <span class="text-xs text-slate-400">GOLD RECOVERABLE</span>
+                    <p class="text-2xl font-extrabold text-amber-400 mt-1" id="vault-stat-gold">0.00 g</p>
+                </div>
+            </div>
+
+            <!-- Vault Table -->
+            <div class="glass-panel rounded-2xl overflow-hidden border border-slate-800">
+                <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+                    <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                        <i data-lucide="list" class="w-4 h-4 text-brand-400"></i> Stored Electronics List
+                    </h3>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-400">Filter:</span>
+                        <select id="vault-filter" onchange="renderVaultTable()" class="bg-slate-900 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1">
+                            <option value="ALL">All Statuses</option>
+                            <option value="SCANNED">Scanned</option>
+                            <option value="RESOLD">Resold</option>
+                            <option value="REPAIRED">Repaired</option>
+                            <option value="UPCYCLED">Upcycled</option>
+                            <option value="RECYCLED">Recycled</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-950/80 text-slate-400 font-mono uppercase border-b border-slate-800">
+                            <tr>
+                                <th class="p-3.5">Device Model</th>
+                                <th class="p-3.5">Brand</th>
+                                <th class="p-3.5">Visual Condition</th>
+                                <th class="p-3.5">Est. Resell Val</th>
+                                <th class="p-3.5">Best 4R Route</th>
+                                <th class="p-3.5">Status</th>
+                                <th class="p-3.5 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vault-table-body" class="divide-y divide-slate-800/60 font-sans">
+                            <!-- Rendered dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 5: IMPACT & BADGES ================= -->
+        <section id="tab-impact" class="tab-content hidden space-y-6">
+            <!-- Gamified Eco Impact Hero -->
+            <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-emerald-500">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div>
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-mono font-bold border border-emerald-500/30 mb-2">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> GAMIFIED CIRCULAR ECONOMY
+                        </div>
+                        <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Your Personal Environmental Impact</h2>
+                        <p class="text-xs text-slate-400 mt-1">Every gadget you repair, resell, upcycle, or recycle prevents toxic landfill leaching and recovers precious earth metals.</p>
+                    </div>
+
+                    <!-- Rank & Level Display -->
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center min-w-[200px]">
+                        <span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">CURRENT ECO RANK</span>
+                        <h3 class="text-xl font-black text-emerald-400 mt-0.5" id="user-rank-title">Level 3: Circular Pioneer</h3>
+                        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mt-2">
+                            <div class="bg-emerald-400 h-full rounded-full" style="width: 68%;"></div>
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-1 font-mono">320 / 500 XP to Level 4</p>
+                    </div>
+                </div>
+
+                <!-- 4 Environmental Metrics Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 font-mono">
+                    <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800">
+                        <div class="flex items-center gap-2 text-emerald-400">
+                            <i data-lucide="leaf" class="w-4 h-4"></i>
+                            <span class="text-xs text-slate-400">CO₂ Prevented</span>
+                        </div>
+                        <p class="text-2xl font-black text-white mt-2" id="impact-co2-val">124.5 <span class="text-xs text-slate-400">kg</span></p>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800">
+                        <div class="flex items-center gap-2 text-amber-400">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            <span class="text-xs text-slate-400">Gold Recovered</span>
+                        </div>
+                        <p class="text-2xl font-black text-white mt-2" id="impact-gold-val">0.185 <span class="text-xs text-slate-400">g</span></p>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800">
+                        <div class="flex items-center gap-2 text-cyan-400">
+                            <i data-lucide="droplet" class="w-4 h-4"></i>
+                            <span class="text-xs text-slate-400">Water Saved</span>
+                        </div>
+                        <p class="text-2xl font-black text-white mt-2" id="impact-water-val">1,420 <span class="text-xs text-slate-400">L</span></p>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800">
+                        <div class="flex items-center gap-2 text-violet-400">
+                            <i data-lucide="shield-check" class="w-4 h-4"></i>
+                            <span class="text-xs text-slate-400">Toxic Waste Avoided</span>
+                        </div>
+                        <p class="text-2xl font-black text-white mt-2" id="impact-ewaste-val">12.8 <span class="text-xs text-slate-400">kg</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Achievements & Badges Grid -->
+            <div class="space-y-4">
+                <h3 class="font-bold text-lg text-white flex items-center gap-2">
+                    <i data-lucide="award" class="w-5 h-5 text-amber-400"></i> Circular Badges & Achievements
+                </h3>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4" id="badges-grid">
+                    <!-- Badges rendered via JS -->
+                </div>
+            </div>
+
+            <!-- Community Leaderboard -->
+            <div class="glass-panel p-6 rounded-2xl space-y-4">
+                <h3 class="font-bold text-lg text-white flex items-center gap-2">
+                    <i data-lucide="users" class="w-5 h-5 text-cyan-400"></i> Global Circularity Leaderboard
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs font-mono">
+                        <thead class="bg-slate-950/80 text-slate-400 uppercase">
+                            <tr>
+                                <th class="p-3">Rank</th>
+                                <th class="p-3">User</th>
+                                <th class="p-3">Gadgets Diverted</th>
+                                <th class="p-3">CO₂ Saved (kg)</th>
+                                <th class="p-3">Cash Unlocked</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/60">
+                            <tr class="bg-brand-500/10 text-brand-300 font-bold">
+                                <td class="p-3">#14 (You)</td>
+                                <td class="p-3 flex items-center gap-1.5"><i data-lucide="user" class="w-3.5 h-3.5"></i> Active Citizen</td>
+                                <td class="p-3" id="lb-user-gadgets">5 Gadgets</td>
+                                <td class="p-3" id="lb-user-co2">124.5 kg</td>
+                                <td class="p-3" id="lb-user-cash">$480</td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 text-amber-400 font-bold">#1 🥇</td>
+                                <td class="p-3">EcoTech_Guru_Delhi</td>
+                                <td class="p-3">84 Gadgets</td>
+                                <td class="p-3">1,420.0 kg</td>
+                                <td class="p-3">$4,250</td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 text-slate-300 font-bold">#2 🥈</td>
+                                <td class="p-3">ZeroWaste_Maya</td>
+                                <td class="p-3">62 Gadgets</td>
+                                <td class="p-3">980.5 kg</td>
+                                <td class="p-3">$3,120</td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 text-amber-600 font-bold">#3 🥉</td>
+                                <td class="p-3">CircuitBreaker_99</td>
+                                <td class="p-3">45 Gadgets</td>
+                                <td class="p-3">720.0 kg</td>
+                                <td class="p-3">$2,400</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 6: REPAIR & RECYCLE LOCATOR ================= -->
+        <section id="tab-locator" class="tab-content hidden space-y-6">
+            <div class="glass-panel p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 border-l-cyan-500">
+                <div>
+                    <h2 class="text-2xl font-extrabold text-white flex items-center gap-2">
+                        <i data-lucide="map-pin" class="w-6 h-6 text-cyan-400"></i> Certified CPCB Recyclers & Repair Centers
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">Locate verified R2/CPCB authorized e-waste collection centers and OEM repair facilities near you.</p>
+                </div>
+                
+                <div class="flex items-center gap-2 font-mono text-xs">
+                    <span class="px-3 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">Verified Hubs</span>
+                </div>
+            </div>
+
+            <!-- Search Controls & List -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Center List Filter & Cards -->
+                <div class="lg:col-span-6 space-y-4">
+                    <div class="flex gap-2">
+                        <input type="text" id="locator-search-input" placeholder="Enter City or Pincode (e.g. Delhi, 110001)..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-cyan-400">
+                        <button onclick="searchLocations()" class="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-bold text-xs flex items-center gap-1">
+                            <i data-lucide="search" class="w-3.5 h-3.5"></i> Search
+                        </button>
+                    </div>
+
+                    <div class="space-y-3" id="hub-list-container">
+                        <!-- Hub Cards Rendered JS -->
+                    </div>
+                </div>
+
+                <!-- Right Column: Interactive Map Preview Card -->
+                <div class="lg:col-span-6">
+                    <div class="glass-panel p-4 rounded-2xl h-[520px] relative overflow-hidden flex flex-col justify-between bg-slate-950">
+                        <div class="absolute inset-0 bg-slate-900/80 flex flex-col items-center justify-center p-6 text-center space-y-3 z-10" id="map-overlay">
+                            <div class="w-12 h-12 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center border border-cyan-500/40">
+                                <i data-lucide="map" class="w-6 h-6"></i>
+                            </div>
+                            <h4 class="font-bold text-white text-base">Interactive Facility Locator</h4>
+                            <p class="text-xs text-slate-400 max-w-sm">Select any verified facility on the left to inspect licensing credentials, schedule doorstep pickup, or launch direct turn-by-turn navigation.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL 1: Buyback Price Lock Modal -->
+    <div id="buyback-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-md w-full p-6 rounded-2xl border border-emerald-500/40 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-emerald-400 text-base flex items-center gap-2">
+                    <i data-lucide="lock" class="w-4 h-4"></i> Lock In Resell Price
+                </h3>
+                <button onclick="closeModal('buyback-modal')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <p class="text-xs text-slate-300">Lock your guaranteed buyback price for 7 days with our verified refurbished network partners.</p>
+            
+            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1 font-mono text-xs">
+                <p class="text-slate-400">Device: <span class="text-white font-bold" id="modal-buyback-device">iPhone X</span></p>
+                <p class="text-slate-400">Locked Price: <span class="text-emerald-400 font-extrabold text-base" id="modal-buyback-price">$145 USD</span></p>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-400 mb-1">Full Name</label>
+                    <input type="text" placeholder="Alex Morgan" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Pickup Address / Phone</label>
+                    <input type="text" placeholder="+1 (555) 019-2831 / City" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
+                </div>
+            </div>
+
+            <button onclick="confirmBuybackLock()" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition">
+                <i data-lucide="check-circle" class="w-4 h-4"></i> Confirm 7-Day Price Lock
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL 2: Recycle Doorstep Pickup & Certificate Modal -->
+    <div id="recycle-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-lg w-full p-6 rounded-2xl border border-amber-500/40 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-amber-400 text-base flex items-center gap-2">
+                    <i data-lucide="truck" class="w-4 h-4"></i> CPCB Authorized Doorstep Pickup
+                </h3>
+                <button onclick="closeModal('recycle-modal')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                    <label class="block text-slate-400 mb-1">Pickup Date</label>
+                    <input type="date" id="recycle-date" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Time Slot</label>
+                    <select class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
+                        <option>Morning (10:00 - 13:00)</option>
+                        <option>Afternoon (14:00 - 17:00)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="space-y-2 text-xs">
+                <label class="block text-slate-400">Pickup Address</label>
+                <input type="text" placeholder="House No, Street, Landmark..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white">
+            </div>
+
+            <!-- Preview Generated Certificate Box -->
+            <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2 relative" id="certificate-preview-box">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div class="flex items-center gap-1.5 text-brand-400 text-xs font-mono font-bold">
+                        <i data-lucide="shield-check" class="w-4 h-4"></i> CPCB / R2 DISPOSAL CERTIFICATE
+                    </div>
+                    <span class="text-[9px] font-mono text-slate-500">REF: CPCB-2026-8842</span>
+                </div>
+                <p class="text-[11px] text-slate-300">Certifies eco-friendly zero-landfill recycling for: <strong class="text-white" id="cert-device-name">iPhone X</strong></p>
+                <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-1">
+                    <span>CO₂ Diverted: <strong class="text-emerald-400">34.2 kg</strong></span>
+                    <span>Gold Saved: <strong class="text-amber-400">0.035 g</strong></span>
+                </div>
+            </div>
+
+            <button onclick="confirmRecyclePickup()" class="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition">
+                <i data-lucide="check" class="w-4 h-4"></i> Schedule Pickup & Generate Certificate
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL 3: Gemini API Key Config -->
+    <div id="apikey-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-md w-full p-6 rounded-2xl border border-brand-500/40 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-brand-400 text-base flex items-center gap-2">
+                    <i data-lucide="key" class="w-4 h-4"></i> Gemini API Vision Integration
+                </h3>
+                <button onclick="closeModal('apikey-modal')" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <p class="text-xs text-slate-300">Enter your custom Google Gemini API Key to run real-time multimodal vision diagnostics on uploaded photos. (Leaves blank to use offline smart fallback engine).</p>
+
+            <div>
+                <label class="block text-xs text-slate-400 mb-1 font-mono">Gemini API Key:</label>
+                <input type="password" id="gemini-api-key-input" placeholder="AIzaSy..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs font-mono text-white">
+            </div>
+
+            <div class="flex items-center justify-between pt-2">
+                <button onclick="saveApiKey()" class="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-slate-950 font-bold text-xs">Save Key</button>
+                <button onclick="clearApiKey()" class="px-3 py-2 rounded-xl bg-slate-800 text-rose-400 text-xs">Clear Key</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/80 bg-slate-950 py-6 text-xs text-slate-500 font-mono">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-2">
+                <i data-lucide="shield-check" class="w-4 h-4 text-brand-500"></i>
+                <span>SPARK • CPCB & R2 Compliant 4R Engine Matrix</span>
+            </div>
+            <div>
+                <span>Powered by Gemini 3 Flash Vision & Computer Vision Diagnostics</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // ================= GLOBAL STATE & DATA STORAGE =================
+        let activeTab = 'scanner';
+        let currency = 'USD'; // 'USD' or 'INR'
+        let exchangeRate = 83.5; // 1 USD = 83.5 INR
+        let userApiKey = localStorage.getItem('resnap_gemini_key') || '';
+        let webcamStream = null;
+        let activeDeviceData = null; // Current scanned gadget object
+        let diagnosticRadar = null;
+
+        // Default Presets Library
+        const PRESET_GADGETS = {
+            'iphone_x': {
+                id: 'preset_1',
+                model: 'Apple iPhone X (64GB)',
+                brand: 'Apple',
+                category: 'smartphone',
+                originalValueUsd: 999,
+                resellValueUsd: 145,
+                repairCostUsd: 65,
+                conditionPct: 62,
+                screenDamagePct: 55,
+                wearPct: 35,
+                batteryHealthPct: 72,
+                portHealthPct: 85,
+                bestRoute: 'RESELL',
+                safetyWarning: false,
+                image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=600&q=80',
+                upcycleIdea: {
+                    title: 'Smart Home AI Security Camera',
+                    desc: 'Convert high-res camera into an IP motion-sensing security camera.',
+                    guideKey: 'smart_cam'
+                },
+                ecoImpact: { co2Kg: 34.2, goldG: 0.035, waterL: 420, ewasteKg: 0.17 }
+            },
+            'galaxy_s9': {
+                id: 'preset_2',
+                model: 'Samsung Galaxy S9 (128GB)',
+                brand: 'Samsung',
+                category: 'smartphone',
+                originalValueUsd: 720,
+                resellValueUsd: 95,
+                repairCostUsd: 40,
+                conditionPct: 78,
+                screenDamagePct: 15,
+                wearPct: 25,
+                batteryHealthPct: 80,
+                portHealthPct: 90,
+                bestRoute: 'REUSE',
+                safetyWarning: false,
+                image: 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=600&q=80',
+                upcycleIdea: {
+                    title: 'Dedicated Auto-Loop Vehicle Dashcam',
+                    desc: 'Repurpose OLED display and camera into a smart auto dashcam.',
+                    guideKey: 'car_dashcam'
+                },
+                ecoImpact: { co2Kg: 28.5, goldG: 0.028, waterL: 380, ewasteKg: 0.16 }
+            },
+            'ipad_mini': {
+                id: 'preset_3',
+                model: 'Apple iPad Mini 4 (WiFi)',
+                brand: 'Apple',
+                category: 'tablet',
+                originalValueUsd: 399,
+                resellValueUsd: 80,
+                repairCostUsd: 75,
+                conditionPct: 70,
+                screenDamagePct: 20,
+                wearPct: 30,
+                batteryHealthPct: 65,
+                portHealthPct: 80,
+                bestRoute: 'REUSE',
+                safetyWarning: false,
+                image: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=600&q=80',
+                upcycleIdea: {
+                    title: 'Smart Wall Weather & Dashboard Display',
+                    desc: 'Mount on wall to display calendar, smart home controls, and live weather.',
+                    guideKey: 'desk_hud'
+                },
+                ecoImpact: { co2Kg: 52.0, goldG: 0.050, waterL: 650, ewasteKg: 0.30 }
+            },
+            'sony_headphones': {
+                id: 'preset_4',
+                model: 'Sony WH-1000XM3 Headphones',
+                brand: 'Sony',
+                category: 'audio',
+                originalValueUsd: 348,
+                resellValueUsd: 110,
+                repairCostUsd: 25,
+                conditionPct: 82,
+                screenDamagePct: 0,
+                wearPct: 40,
+                batteryHealthPct: 85,
+                portHealthPct: 95,
+                bestRoute: 'REPAIR',
+                safetyWarning: false,
+                image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=80',
+                upcycleIdea: {
+                    title: 'Bluetooth PC Wireless Audio Station',
+                    desc: 'Replace ear cushions and use as permanent desktop studio headset.',
+                    guideKey: 'smart_cam'
+                },
+                ecoImpact: { co2Kg: 18.2, goldG: 0.012, waterL: 210, ewasteKg: 0.25 }
+            },
+            'dell_laptop': {
+                id: 'preset_5',
+                model: 'Dell Inspiron 15 (8GB RAM / 256GB SSD)',
+                brand: 'Dell',
+                category: 'laptop',
+                originalValueUsd: 650,
+                resellValueUsd: 120,
+                repairCostUsd: 110,
+                conditionPct: 50,
+                screenDamagePct: 40,
+                wearPct: 60,
+                batteryHealthPct: 45,
+                portHealthPct: 70,
+                bestRoute: 'REUSE',
+                safetyWarning: false,
+                image: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=600&q=80',
+                upcycleIdea: {
+                    title: 'Personal Cloud NAS & Home Server',
+                    desc: 'Convert core hardware into a low-power home file server or Plex node.',
+                    guideKey: 'home_nas'
+                },
+                ecoImpact: { co2Kg: 140.0, goldG: 0.120, waterL: 1800, ewasteKg: 2.10 }
+            },
+            'swollen_phone': {
+                id: 'preset_6',
+                model: 'Old Android Device (Battery Swollen)',
+                brand: 'Generic',
+                category: 'smartphone',
+                originalValueUsd: 300,
+                resellValueUsd: 10,
+                repairCostUsd: 90,
+                conditionPct: 15,
+                screenDamagePct: 80,
+                wearPct: 90,
+                batteryHealthPct: 10,
+                portHealthPct: 30,
+                bestRoute: 'RECYCLE',
+                safetyWarning: true,
+                image: 'https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?auto=format&fit=crop&w=600&q=80',
+                upcycleIdea: {
+                    title: 'Recycle Immediately',
+                    desc: 'Swollen batteries are a safety hazard. Disposal required.',
+                    guideKey: 'smart_cam'
+                },
+                ecoImpact: { co2Kg: 22.0, goldG: 0.020, waterL: 300, ewasteKg: 0.15 }
+            }
+        };
+
+        // Persistent E-Waste Vault Items
+        let vaultItems = JSON.parse(localStorage.getItem('resnap_vault')) || [
+            {
+                id: 'v_101',
+                model: 'Apple iPhone X (64GB)',
+                brand: 'Apple',
+                resellValueUsd: 145,
+                bestRoute: 'RESELL',
+                status: 'SCANNED',
+                conditionPct: 62,
+                ecoImpact: { co2Kg: 34.2, goldG: 0.035, waterL: 420, ewasteKg: 0.17 },
+                date: '2026-09-18'
+            },
+            {
+                id: 'v_102',
+                model: 'Dell Inspiron 15 Laptop',
+                brand: 'Dell',
+                resellValueUsd: 120,
+                bestRoute: 'REUSE',
+                status: 'UPCYCLED',
+                conditionPct: 50,
+                ecoImpact: { co2Kg: 140.0, goldG: 0.120, waterL: 1800, ewasteKg: 2.10 },
+                date: '2026-09-22'
+            }
+        ];
+
+        window.onload = function() {
+            lucide.createIcons();
+            initDiagnosticRadarChart();
+            loadDemoPreset('iphone_x');
+            renderVaultTable();
+            renderBadges();
+            selectDIYProject('smart_cam');
+            renderHubsList();
+        };
+
+        // Navigation Tab Switching Logic
+        function switchTab(tabId) {
+            activeTab = tabId;
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-brand-400', 'bg-brand-500/10', 'border', 'border-brand-500/30', 'font-semibold');
+                btn.classList.add('text-slate-400');
+            });
+
+            const activeContent = document.getElementById(`tab-${tabId}`);
+            if (activeContent) activeContent.classList.remove('hidden');
+
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.add('text-brand-400', 'bg-brand-500/10', 'border', 'border-brand-500/30', 'font-semibold');
+                activeBtn.classList.remove('text-slate-400');
+            }
+
+            if (tabId === 'vault') renderVaultTable();
+            if (tabId === 'impact') updateImpactView();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function toggleMobileNav() {
+            const nav = document.getElementById('mobile-nav');
+            nav.classList.toggle('hidden');
+        }
+
+        // Currency Toggle
+        function toggleCurrency() {
+            currency = (currency === 'USD') ? 'INR' : 'USD';
+            const label = (currency === 'USD') ? '$ USD' : '₹ INR';
+            document.getElementById('currency-label').innerText = label;
+            document.getElementById('mobile-currency-label').innerText = label;
+            updateUIValuesForCurrency();
+        }
+
+        function formatMoney(usdAmount) {
+            if (currency === 'INR') {
+                const inr = Math.round(usdAmount * exchangeRate);
+                return `₹${inr.toLocaleString('en-IN')}`;
+            }
+            return `$${usdAmount.toFixed(2)}`;
+        }
+
+        function updateUIValuesForCurrency() {
+            if (activeDeviceData) updateMatrixAndSummaryDisplay(activeDeviceData);
+            renderVaultTable();
+        }
+
+        function initDiagnosticRadarChart() {
+            const ctx = document.getElementById('diagnosticRadarChart').getContext('2d');
+            diagnosticRadar = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Display Quality', 'Housing Integrity', 'Battery Health', 'Port Health', 'Motherboard'],
+                    datasets: [{
+                        label: 'Device Health %',
+                        data: [45, 65, 72, 85, 90],
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        borderColor: '#10b981',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#06b6d4',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: '#10b981'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            pointLabels: { color: '#94a3b8', font: { size: 9, family: 'JetBrains Mono' } },
+                            ticks: { display: false, min: 0, max: 100 }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function updateDiagnosticsFromSliders() {
+            const screenDamage = parseInt(document.getElementById('slider-screen').value);
+            const wear = parseInt(document.getElementById('slider-wear').value);
+            const battery = parseInt(document.getElementById('slider-battery').value);
+            const port = parseInt(document.getElementById('slider-port').value);
+
+            document.getElementById('slider-screen-val').innerText = `${screenDamage}%`;
+            document.getElementById('slider-wear-val').innerText = `${wear}%`;
+            document.getElementById('slider-battery-val').innerText = `${battery}%`;
+            document.getElementById('slider-port-val').innerText = `${port}%`;
+
+            const displayHealth = Math.max(0, 100 - screenDamage);
+            const housingHealth = Math.max(0, 100 - wear);
+
+            if (diagnosticRadar) {
+                diagnosticRadar.data.datasets[0].data = [displayHealth, housingHealth, battery, port, 90];
+                diagnosticRadar.update();
+            }
+
+            if (activeDeviceData) {
+                activeDeviceData.screenDamagePct = screenDamage;
+                activeDeviceData.wearPct = wear;
+                activeDeviceData.batteryHealthPct = battery;
+                activeDeviceData.portHealthPct = port;
+                recalculateDeviceValuation(activeDeviceData);
+            }
+        }
+
+        function loadDemoPreset(presetKey) {
+            const preset = PRESET_GADGETS[presetKey];
+            if (!preset) return;
+
+            activeDeviceData = JSON.parse(JSON.stringify(preset));
+
+            // Set Image Preview
+            const imgEl = document.getElementById('scanned-image-preview');
+            const placeholder = document.getElementById('upload-placeholder');
+            imgEl.src = preset.image;
+            imgEl.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+
+            // Show HUD Box
+            const bbox = document.getElementById('hud-bounding-box');
+            bbox.classList.remove('hidden');
+            bbox.style.top = '15%';
+            bbox.style.left = '15%';
+            bbox.style.width = '70%';
+            bbox.style.height = '70%';
+            document.getElementById('hud-detected-tag').innerText = `DETECTED: ${preset.model}`;
+
+            // Set Sliders
+            document.getElementById('slider-screen').value = preset.screenDamagePct;
+            document.getElementById('slider-wear').value = preset.wearPct;
+            document.getElementById('slider-battery').value = preset.batteryHealthPct;
+            document.getElementById('slider-port').value = preset.portHealthPct;
+            updateDiagnosticsFromSliders();
+
+            // Safety Warning
+            const alertBanner = document.getElementById('safety-alert-banner');
+            if (preset.safetyWarning) {
+                alertBanner.classList.remove('hidden');
+            } else {
+                alertBanner.classList.add('hidden');
+            }
+
+            updateMatrixAndSummaryDisplay(activeDeviceData);
+        }
+
+        function recalculateDeviceValuation(gadget) {
+            // Adjust resell value based on screen crack & battery health
+            const baseResell = gadget.originalValueUsd * 0.25;
+            const screenDeduction = (gadget.screenDamagePct / 100) * 0.4 * baseResell;
+            const batteryDeduction = ((100 - gadget.batteryHealthPct) / 100) * 0.2 * baseResell;
+            
+            gadget.resellValueUsd = Math.max(10, Math.round(baseResell - screenDeduction - batteryDeduction));
+
+            if (gadget.safetyWarning) {
+                gadget.bestRoute = 'RECYCLE';
+            } else if (gadget.resellValueUsd > 100) {
+                gadget.bestRoute = 'RESELL';
+            } else if (gadget.repairCostUsd < gadget.resellValueUsd * 0.6) {
+                gadget.bestRoute = 'REPAIR';
+            } else {
+                gadget.bestRoute = 'REUSE';
+            }
+
+            updateMatrixAndSummaryDisplay(gadget);
+        }
+
+        function updateMatrixAndSummaryDisplay(gadget) {
+            // Scanner Tab Quick Summary
+            document.getElementById('summary-best-route-title').innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4"></i> Optimal Route: ${gadget.bestRoute}`;
+            document.getElementById('summary-est-val').innerText = formatMoney(gadget.resellValueUsd);
+
+            // Matrix Tab Updates
+            document.getElementById('matrix-gadget-title').innerText = `Active Device: ${gadget.model}`;
+
+            // Resell Card
+            document.getElementById('resell-val-display').innerText = formatMoney(gadget.resellValueUsd);
+            document.getElementById('resell-price-cashify').innerText = formatMoney(gadget.resellValueUsd);
+            document.getElementById('resell-price-backmarket').innerText = formatMoney(gadget.resellValueUsd * 0.95);
+            document.getElementById('resell-price-ebay').innerText = `${formatMoney(gadget.resellValueUsd * 1.08)} (Private)`;
+
+            // Repair Card
+            document.getElementById('repair-cost-display').innerText = formatMoney(gadget.repairCostUsd);
+            document.getElementById('repair-vs-replace-display').innerText = `${formatMoney(gadget.originalValueUsd * 0.6)} Replacement`;
+            const repairRatio = Math.min(100, Math.round((gadget.repairCostUsd / (gadget.originalValueUsd * 0.6)) * 100));
+            document.getElementById('repair-ratio-bar').style.width = `${repairRatio}%`;
+            document.getElementById('repair-ratio-label').innerText = `Repair cost is ${repairRatio}% of replacement value.`;
+
+            // Upcycle Card
+            document.getElementById('upcycle-project-name').innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 text-violet-400"></i> ${gadget.upcycleIdea.title}`;
+            document.getElementById('upcycle-project-desc').innerText = gadget.upcycleIdea.desc;
+
+            // Recycle Card
+            document.getElementById('recycle-co2-val').innerText = `${gadget.ecoImpact.co2Kg} kg`;
+            document.getElementById('recycle-gold-val').innerText = `${gadget.ecoImpact.goldG} g`;
+            document.getElementById('cert-device-name').innerText = gadget.model;
+
+            // Highlight Optimal Route Card
+            const routes = ['resell', 'repair', 'reuse', 'recycle'];
+            routes.forEach(r => {
+                const card = document.getElementById(`card-route-${r}`);
+                if (card) {
+                    if (r.toUpperCase() === gadget.bestRoute) {
+                        card.classList.add('border-brand-500', 'bg-brand-500/5', 'shadow-xl');
+                        card.classList.remove('border-transparent', 'border-slate-800');
+                    } else {
+                        card.classList.remove('border-brand-500', 'bg-brand-500/5', 'shadow-xl');
+                        card.classList.add('border-slate-800');
+                    }
+                }
+            });
+
+            lucide.createIcons();
+        }
+
+        function triggerFileInput() {
+            document.getElementById('file-input').click();
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imgEl = document.getElementById('scanned-image-preview');
+                const placeholder = document.getElementById('upload-placeholder');
+                imgEl.src = e.target.result;
+                imgEl.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                executeAIScan();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function toggleWebcam() {
+            const video = document.getElementById('webcam-feed');
+            const btnText = document.getElementById('webcam-btn-text');
+
+            if (webcamStream) {
+                // Stop Webcam
+                webcamStream.getTracks().forEach(track => track.stop());
+                webcamStream = null;
+                video.classList.add('hidden');
+                btnText.innerText = 'Start Camera';
+            } else {
+                try {
+                    webcamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                    video.srcObject = webcamStream;
+                    video.classList.remove('hidden');
+                    document.getElementById('upload-placeholder').classList.add('hidden');
+                    btnText.innerText = 'Stop Camera';
+                } catch (err) {
+                    showToast('Camera access denied or unavailable', 'error');
+                }
+            }
+        }
+
+        async function executeAIScan() {
+            const laser = document.getElementById('scan-laser-line');
+            const runBtn = document.getElementById('run-ai-btn');
+
+            laser.classList.remove('hidden');
+            runBtn.disabled = true;
+            runBtn.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> AI Vision Analyzing...`;
+            lucide.createIcons();
+
+            // Check if user provided a Gemini key and an image exists
+            const imgEl = document.getElementById('scanned-image-preview');
+            const hasCustomImage = imgEl && !imgEl.classList.contains('hidden');
+
+            if (userApiKey && hasCustomImage) {
+                try {
+                    const base64Data = imgEl.src.split(',')[1];
+                    const payload = {
+                        contents: [{
+                            role: 'user',
+                            parts: [
+                                { text: 'Analyze this gadget image. Return strict JSON with fields: model (string), brand (string), category (smartphone|laptop|tablet|audio), conditionPct (number 0-100), screenDamagePct (number 0-100), wearPct (number 0-100), batteryHealthPct (number 0-100), estimatedResellUsd (number), repairCostUsd (number), bestRoute (RESELL|REPAIR|REUSE|RECYCLE), safetyWarning (boolean).' },
+                                { inlineData: { mimeType: 'image/jpeg', data: base64Data } }
+                            ]
+                        }],
+                        generationConfig: { responseMimeType: 'application/json' }
+                    };
+
+                    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${userApiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await resp.json();
+                    if (data.candidates && data.candidates[0].content.parts[0].text) {
+                        const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
+                        activeDeviceData = {
+                            id: `scanned_${Date.now()}`,
+                            model: parsed.model || 'Detected Electronic Device',
+                            brand: parsed.brand || 'Generic',
+                            category: parsed.category || 'smartphone',
+                            originalValueUsd: (parsed.estimatedResellUsd || 100) * 3,
+                            resellValueUsd: parsed.estimatedResellUsd || 85,
+                            repairCostUsd: parsed.repairCostUsd || 45,
+                            conditionPct: parsed.conditionPct || 70,
+                            screenDamagePct: parsed.screenDamagePct || 20,
+                            wearPct: parsed.wearPct || 25,
+                            batteryHealthPct: parsed.batteryHealthPct || 75,
+                            portHealthPct: 85,
+                            bestRoute: parsed.bestRoute || 'RESELL',
+                            safetyWarning: parsed.safetyWarning || false,
+                            image: imgEl.src,
+                            upcycleIdea: {
+                                title: 'Smart Home Security Hub',
+                                desc: 'Repurpose hardware components for smart home control.',
+                                guideKey: 'smart_cam'
+                            },
+                            ecoImpact: { co2Kg: 30.0, goldG: 0.03, waterL: 400, ewasteKg: 0.2 }
+                        };
+                        showToast('Gemini 3 Flash Multimodal Vision Completed!', 'success');
+                    }
+                } catch (e) {
+                    console.log('Gemini API fallback to offline smart engine', e);
+                }
+            }
+
+            // Simulate scanning laser duration
+            setTimeout(() => {
+                laser.classList.add('hidden');
+                runBtn.disabled = false;
+                runBtn.innerHTML = `<i data-lucide="cpu" class="w-4 h-4"></i> Run AI Assessment`;
+                
+                // Show detected bounding box
+                const bbox = document.getElementById('hud-bounding-box');
+                bbox.classList.remove('hidden');
+                document.getElementById('hud-detected-tag').innerText = `DETECTED: ${activeDeviceData.model}`;
+
+                updateMatrixAndSummaryDisplay(activeDeviceData);
+                showToast(`AI Diagnostic Complete: ${activeDeviceData.model}`, 'success');
+                lucide.createIcons();
+            }, 1800);
+        }
+
+        const DIY_GUIDES = {
+            'smart_cam': {
+                title: 'Smart Home AI Security Camera',
+                hardwareNeeded: ['Old Phone/Tablet', 'USB Power Cable', 'Sticky Wall Mount Bracket'],
+                appsToDownload: ['Alfred Security Camera', 'IP Webcam (Android)', 'Manything (iOS)'],
+                steps: [
+                    'Clean phone camera lens with microfiber cloth.',
+                    'Install Security Camera app from store and log into master account.',
+                    'Mount phone near target area with continuous USB power connection.',
+                    'Enable motion-detection zones and push notifications.'
+                ]
+            },
+            'desk_hud': {
+                title: 'Dedicated Smart Wall Weather & Calendar Dashboard',
+                hardwareNeeded: ['Old Tablet or iPad', 'Wall Adhesive Mount', 'Power Cable'],
+                appsToDownload: ['Fully Single App Kiosk', 'Dakboard Web Dashboard', 'ActionTiles'],
+                steps: [
+                    'Factory reset tablet and update to newest supported web browser.',
+                    'Create a free DAKboard layout with local weather forecast and Google Calendar.',
+                    'Set tablet browser to Kiosk full-screen mode.',
+                    'Mount at entryway or kitchen desk.'
+                ]
+            },
+            'home_nas': {
+                title: 'Personal Cloud NAS & Media Server',
+                hardwareNeeded: ['Old Laptop', 'External Hard Drive (1TB+)', 'Ethernet Cable'],
+                appsToDownload: ['OpenMediaVault OS', 'Plex Media Server', 'Nextcloud Docker'],
+                steps: [
+                    'Install OpenMediaVault or Ubuntu Server on laptop drive.',
+                    'Connect external USB drive for storage pool.',
+                    'Configure Samba shared drives for automated home laptop backups.',
+                    'Enable Plex server to stream movie library across home smart TVs.'
+                ]
+            },
+            'car_dashcam': {
+                title: 'Auto-Loop Vehicle Dashcam',
+                hardwareNeeded: ['Old Android/iOS Phone', 'Suction Car Windshield Mount', '12V Car Charger'],
+                appsToDownload: ['AutoBoy Dash Cam', 'RoadRecorder', 'Driver AI'],
+                steps: [
+                    'Attach phone mount behind rear-view mirror.',
+                    'Install AutoBoy Dashcam app and set continuous loop recording to 5-minute clips.',
+                    'Enable background G-sensor auto-saving on impact.',
+                    'Connect auto-ignition USB power adapter.'
+                ]
+            }
+        };
+
+        function selectDIYProject(guideKey) {
+            const guide = DIY_GUIDES[guideKey];
+            if (!guide) return;
+
+            document.querySelectorAll('.diy-selector-card').forEach(c => {
+                c.classList.remove('border-violet-500/50', 'bg-violet-500/10');
+                c.classList.add('border-slate-800');
+            });
+            const activeCard = document.getElementById(`diy-card-${guideKey}`);
+            if (activeCard) {
+                activeCard.classList.add('border-violet-500/50', 'bg-violet-500/10');
+            }
+
+            const container = document.getElementById('diy-guide-container');
+            container.innerHTML = `
+                <div class="border-b border-slate-800 pb-4 flex justify-between items-start">
+                    <div>
+                        <span class="text-xs font-mono text-violet-400 uppercase">Step-By-Step Transformation Blueprint</span>
+                        <h3 class="text-xl font-bold text-white mt-1">${guide.title}</h3>
+                    </div>
+                    <button onclick="markProjectUpcycled('${guide.title}')" class="px-3.5 py-2 rounded-xl bg-violet-500 hover:bg-violet-600 text-white font-bold text-xs flex items-center gap-1.5 transition">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i> Mark as Upcycled
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+                    <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                        <h4 class="font-bold text-slate-300 mb-2 flex items-center gap-1.5"><i data-lucide="box" class="w-3.5 h-3.5 text-violet-400"></i> Hardware Needed:</h4>
+                        <ul class="list-disc list-inside text-slate-400 space-y-1">
+                            ${guide.hardwareNeeded.map(h => `<li>${h}</li>`).join('')}
+                        </ul>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                        <h4 class="font-bold text-slate-300 mb-2 flex items-center gap-1.5"><i data-lucide="download" class="w-3.5 h-3.5 text-cyan-400"></i> Recommended Apps / Tools:</h4>
+                        <ul class="list-disc list-inside text-slate-400 space-y-1">
+                            ${guide.appsToDownload.map(a => `<li>${a}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <h4 class="font-bold text-sm text-white flex items-center gap-2">
+                        <i data-lucide="list-checks" class="w-4 h-4 text-brand-400"></i> Execution Steps:
+                    </h4>
+                    <div class="space-y-2 text-xs">
+                        ${guide.steps.map((step, idx) => `
+                            <div class="flex items-start gap-3 p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                                <span class="w-6 h-6 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/40 flex items-center justify-center font-mono font-bold shrink-0">${idx + 1}</span>
+                                <p class="text-slate-300 mt-0.5">${step}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function launchStudioProjectFromMatrix() {
+            switchTab('upcycle');
+            if (activeDeviceData && activeDeviceData.upcycleIdea) {
+                selectDIYProject(activeDeviceData.upcycleIdea.guideKey || 'smart_cam');
+            }
+        }
+
+        function markProjectUpcycled(title) {
+            confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+            showToast(`Awesome! "${title}" added to your impact score!`, 'success');
+            
+            if (activeDeviceData) {
+                vaultItems.push({
+                    id: `v_${Date.now()}`,
+                    model: activeDeviceData.model,
+                    brand: activeDeviceData.brand,
+                    resellValueUsd: activeDeviceData.resellValueUsd,
+                    bestRoute: 'REUSE',
+                    status: 'UPCYCLED',
+                    conditionPct: activeDeviceData.conditionPct,
+                    ecoImpact: activeDeviceData.ecoImpact,
+                    date: new Date().toISOString().split('T')[0]
+                });
+                localStorage.setItem('resnap_vault', JSON.stringify(vaultItems));
+            }
+        }
+
+        function saveActiveDeviceToVault() {
+            if (!activeDeviceData) return;
+            vaultItems.push({
+                id: `v_${Date.now()}`,
+                model: activeDeviceData.model,
+                brand: activeDeviceData.brand,
+                resellValueUsd: activeDeviceData.resellValueUsd,
+                bestRoute: activeDeviceData.bestRoute,
+                status: 'SCANNED',
+                conditionPct: activeDeviceData.conditionPct,
+                ecoImpact: activeDeviceData.ecoImpact,
+                date: new Date().toISOString().split('T')[0]
+            });
+            localStorage.setItem('resnap_vault', JSON.stringify(vaultItems));
+            renderVaultTable();
+            showToast(`Saved ${activeDeviceData.model} to My Drawer!`, 'success');
+        }
+
+        function renderVaultTable() {
+            const tbody = document.getElementById('vault-table-body');
+            const filter = document.getElementById('vault-filter').value;
+            
+            const filtered = (filter === 'ALL') ? vaultItems : vaultItems.filter(i => i.status === filter);
+
+            // Update Vault Count Badge
+            document.getElementById('vault-count-badge').innerText = vaultItems.length;
+            document.getElementById('vault-count-badge').classList.remove('hidden');
+
+            // Update Stats
+            let totalCash = 0, totalCo2 = 0, totalGold = 0;
+            vaultItems.forEach(i => {
+                totalCash += i.resellValueUsd;
+                totalCo2 += (i.ecoImpact ? i.ecoImpact.co2Kg : 30);
+                totalGold += (i.ecoImpact ? i.ecoImpact.goldG : 0.03);
+            });
+
+            document.getElementById('vault-stat-count').innerText = vaultItems.length;
+            document.getElementById('vault-stat-cash').innerText = formatMoney(totalCash);
+            document.getElementById('vault-stat-co2').innerText = `${totalCo2.toFixed(1)} kg`;
+            document.getElementById('vault-stat-gold').innerText = `${totalGold.toFixed(3)} g`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="p-8 text-center text-slate-500 font-mono">
+                            No stored devices found in drawer. Click "Scan Gadget" to add one!
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(item => `
+                <tr class="hover:bg-slate-900/50 transition">
+                    <td class="p-3.5 font-bold text-white">${item.model}</td>
+                    <td class="p-3.5 text-slate-400">${item.brand}</td>
+                    <td class="p-3.5">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-900 border border-slate-700 text-slate-300">
+                            Condition: ${item.conditionPct}%
+                        </span>
+                    </td>
+                    <td class="p-3.5 font-mono text-emerald-400 font-bold">${formatMoney(item.resellValueUsd)}</td>
+                    <td class="p-3.5 font-mono text-brand-400 font-semibold">${item.bestRoute}</td>
+                    <td class="p-3.5">
+                        <select onchange="updateVaultItemStatus('${item.id}', this.value)" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[11px] text-slate-200">
+                            <option value="SCANNED" ${item.status === 'SCANNED' ? 'selected' : ''}>Scanned</option>
+                            <option value="RESOLD" ${item.status === 'RESOLD' ? 'selected' : ''}>Resold</option>
+                            <option value="REPAIRED" ${item.status === 'REPAIRED' ? 'selected' : ''}>Repaired</option>
+                            <option value="UPCYCLED" ${item.status === 'UPCYCLED' ? 'selected' : ''}>Upcycled</option>
+                            <option value="RECYCLED" ${item.status === 'RECYCLED' ? 'selected' : ''}>Recycled</option>
+                        </select>
+                    </td>
+                    <td class="p-3.5 text-right space-x-1">
+                        <button onclick="deleteVaultItem('${item.id}')" class="p-1.5 rounded hover:bg-slate-800 text-rose-400" title="Delete">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function updateVaultItemStatus(id, newStatus) {
+            const item = vaultItems.find(i => i.id === id);
+            if (item) {
+                item.status = newStatus;
+                localStorage.setItem('resnap_vault', JSON.stringify(vaultItems));
+                showToast(`Status updated to ${newStatus}`, 'info');
+            }
+        }
+
+        function deleteVaultItem(id) {
+            vaultItems = vaultItems.filter(i => i.id !== id);
+            localStorage.setItem('resnap_vault', JSON.stringify(vaultItems));
+            renderVaultTable();
+            showToast('Item removed from vault', 'info');
+        }
+
+        function openAddManualGadgetModal() {
+            const model = prompt("Enter Device Name (e.g., Nintendo Switch):");
+            if (!model) return;
+            vaultItems.push({
+                id: `v_${Date.now()}`,
+                model: model,
+                brand: 'Custom',
+                resellValueUsd: 110,
+                bestRoute: 'RESELL',
+                status: 'SCANNED',
+                conditionPct: 75,
+                ecoImpact: { co2Kg: 25.0, goldG: 0.02, waterL: 300, ewasteKg: 0.2 },
+                date: new Date().toISOString().split('T')[0]
+            });
+            localStorage.setItem('resnap_vault', JSON.stringify(vaultItems));
+            renderVaultTable();
+            showToast(`Added ${model} to vault!`, 'success');
+        }
+
+        function exportVaultSummaryReport() {
+            let report = `SPARK - OFFICIAL E-WASTE & CIRCULARITY AUDIT REPORT\n`;
+            report += `Generated: ${new Date().toLocaleDateString()}\n`;
+            report += `========================================================\n\n`;
+            vaultItems.forEach((i, idx) => {
+                report += `${idx + 1}. ${i.model} (${i.brand}) - Est Value: $${i.resellValueUsd} | Best Route: ${i.bestRoute} | Status: ${i.status}\n`;
+            });
+            report += `\nCPCB Zero Landfill Certified Protocol Compliance.`;
+
+            const blob = new Blob([report], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `SPARK_Ewaste_Report.txt`;
+            a.click();
+            showToast('Eco Summary Audit Exported!', 'success');
+        }
+
+        const BADGES_LIST = [
+            { title: 'Circularity Pioneer', icon: 'shield-check', desc: 'Scan your first gadget for 4R diagnostic.', unlocked: true },
+            { title: 'Gold Miner', icon: 'sparkles', desc: 'Recover over 0.1g of gold from old electronics.', unlocked: true },
+            { title: 'Upcycle Master', icon: 'wrench', desc: 'Transform a device into a smart home camera/server.', unlocked: true },
+            { title: 'Zero-Waste Hero', icon: 'recycle', desc: 'Schedule CPCB certified doorstep pickup.', unlocked: false },
+            { title: 'CPCB Champion', icon: 'award', desc: 'Divert over 100kg of CO2 emissions.', unlocked: true },
+            { title: 'Cash Collector', icon: 'dollar-sign', desc: 'Unlock over $200 in resell buybacks.', unlocked: true }
+        ];
+
+        function renderBadges() {
+            const grid = document.getElementById('badges-grid');
+            grid.innerHTML = BADGES_LIST.map(b => `
+                <div class="p-4 rounded-xl glass-panel text-center space-y-2 border ${b.unlocked ? 'border-brand-500/40 bg-brand-500/5' : 'border-slate-800 opacity-50'}">
+                    <div class="w-10 h-10 rounded-full mx-auto flex items-center justify-center ${b.unlocked ? 'bg-brand-500/20 text-brand-400' : 'bg-slate-800 text-slate-500'}">
+                        <i data-lucide="${b.icon}" class="w-5 h-5"></i>
+                    </div>
+                    <h4 class="font-bold text-xs text-white">${b.title}</h4>
+                    <p class="text-[10px] text-slate-400 font-sans">${b.desc}</p>
+                    <span class="inline-block px-2 py-0.5 rounded text-[9px] font-mono ${b.unlocked ? 'bg-brand-500/20 text-brand-400' : 'bg-slate-900 text-slate-500'}">
+                        ${b.unlocked ? 'UNLOCKED' : 'LOCKED'}
+                    </span>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function updateImpactView() {
+            renderBadges();
+        }
+
+        const REPAIR_HUBS = [
+            { name: 'EcoRecycle CPCB Authorized Hub', city: 'Delhi / NCR', rating: '4.9 ★', dist: '2.4 km', type: 'Recycling Facility' },
+            { name: 'Attero Certified E-Waste Center', city: 'Okhla Industrial Area', rating: '4.8 ★', dist: '5.1 km', type: 'Recycling Facility' },
+            { name: 'OEM Apple/Samsung Repair Express', city: 'Connaught Place', rating: '4.7 ★', dist: '3.8 km', type: 'Certified Repair Shop' },
+            { name: 'Greentronics Safe Disposal Hub', city: 'Nehru Place', rating: '4.9 ★', dist: '4.2 km', type: 'Recycling & Repair' }
+        ];
+
+        function renderHubsList() {
+            const container = document.getElementById('hub-list-container');
+            container.innerHTML = REPAIR_HUBS.map(h => `
+                <div class="glass-panel p-4 rounded-xl border border-slate-800 space-y-2 hover:border-cyan-500/40 transition">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-bold text-sm text-white">${h.name}</h4>
+                            <p class="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                                <i data-lucide="map-pin" class="w-3 h-3 text-cyan-400"></i> ${h.city} • ${h.dist}
+                            </p>
+                        </div>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">${h.type}</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-2 border-t border-slate-800 text-xs font-mono">
+                        <span class="text-amber-400">${h.rating} (CPCB Verified)</span>
+                        <button onclick="showToast('Facility Location Pinned', 'info')" class="text-cyan-400 hover:underline">View on Map →</button>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function searchLocations() {
+            const q = document.getElementById('locator-search-input').value;
+            if (q) showToast(`Displaying certified facilities near "${q}"`, 'info');
+        }
+
+        function openBuybackModal() {
+            document.getElementById('modal-buyback-device').innerText = activeDeviceData ? activeDeviceData.model : 'iPhone X';
+            document.getElementById('modal-buyback-price').innerText = activeDeviceData ? formatMoney(activeDeviceData.resellValueUsd) : '$145 USD';
+            document.getElementById('buyback-modal').classList.remove('hidden');
+        }
+
+        function confirmBuybackLock() {
+            closeModal('buyback-modal');
+            confetti({ particleCount: 70, spread: 50, origin: { y: 0.6 } });
+            showToast('Price lock confirmed! Free shipping label sent to your email.', 'success');
+        }
+
+        function openRecyclePickupModal() {
+            document.getElementById('recycle-modal').classList.remove('hidden');
+        }
+
+        function confirmRecyclePickup() {
+            closeModal('recycle-modal');
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            showToast('Doorstep Pickup Scheduled! Certificate downloaded.', 'success');
+        }
+
+        function triggerPriceAlert() {
+            showToast('Price Alert Triggered! We will alert you if buyback value jumps >10%.', 'info');
+        }
+
+        function openRepairShopModal() {
+            switchTab('locator');
+        }
+
+        function openApiKeyModal() {
+            document.getElementById('gemini-api-key-input').value = userApiKey;
+            document.getElementById('apikey-modal').classList.remove('hidden');
+        }
+
+        function saveApiKey() {
+            userApiKey = document.getElementById('gemini-api-key-input').value.trim();
+            localStorage.setItem('resnap_gemini_key', userApiKey);
+            closeModal('apikey-modal');
+            showToast('Gemini API Key Saved!', 'success');
+        }
+
+        function clearApiKey() {
+            userApiKey = '';
+            localStorage.removeItem('resnap_gemini_key');
+            document.getElementById('gemini-api-key-input').value = '';
+            closeModal('apikey-modal');
+            showToast('Key cleared. Engine reset to offline fallback mode.', 'info');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        // Custom Toast Dialog Notification System
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl backdrop-blur-md text-xs font-semibold flex items-center gap-2 transition duration-300 transform translate-y-10 opacity-0 border`;
+            
+            if (type === 'success') {
+                toast.classList.add('bg-emerald-950/90', 'text-emerald-300', 'border-emerald-500/50');
+                toast.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i> ${message}`;
+            } else if (type === 'error') {
+                toast.classList.add('bg-rose-950/90', 'text-rose-300', 'border-rose-500/50');
+                toast.innerHTML = `<i data-lucide="alert-circle" class="w-4 h-4 text-rose-400"></i> ${message}`;
+            } else {
+                toast.classList.add('bg-slate-900/90', 'text-cyan-300', 'border-cyan-500/50');
+                toast.innerHTML = `<i data-lucide="info" class="w-4 h-4 text-cyan-400"></i> ${message}`;
+            }
+
+            document.body.appendChild(toast);
+            lucide.createIcons();
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            }, 50);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
