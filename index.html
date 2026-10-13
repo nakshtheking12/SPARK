@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="genz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S.P.A.R.K. — Smart Photo Assessment & Recycling Keypoint</title>
+    <meta name="theme-color" content="#FFFBF0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Bricolage Grotesque','DM Sans','sans-serif'],display:['Syne','sans-serif'],mono:['JetBrains Mono','monospace']}}}}</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Syne:wght@600;700;800&family=Fraunces:ital,opsz,wght@1,9..144,500;1,9..144,700&family=DM+Sans:wght@500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js",
+        "firebase/analytics": "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js"
+      }
+    }
+    </script>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-[#E8FF86] selection:text-black">
+    <div class="bg-stage">
+        <div class="blob blob-lime"></div>
+        <div class="blob blob-lav"></div>
+        <div class="blob blob-peach"></div>
+        <div class="blob blob-aqua"></div>
+    </div>
+    <div class="grain"></div>
+    <div class="float-orbs" aria-hidden="true">
+        <div class="orb-3d orb-1"></div>
+        <div class="orb-3d orb-2"></div>
+        <div class="orb-3d orb-3"></div>
+        <div class="orb-3d orb-4"></div>
+    </div>
+    <!-- AUTH SCREEN -->
+    <div id="auth-screen">
+        <div class="auth-shell">
+            <div class="auth-left">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="logo-blob"><span class="logo-mark">S</span></div>
+                    <div>
+                        <span class="text-[24px] font-extrabold tracking-[-0.03em]" style="font-family:'Syne'">SPARK</span>
+                        <p class="text-[11px] font-bold opacity-60 -mt-1">Smart Photo Assessment & Recycling Keypoint</p>
+                    </div>
+                </div>
+<h2 class="text- font-extrabold tracking-[-0.04em]" style="font-family:'Syne'; line-height:0.95; padding-top:4px;">
+  Turn drawer<br>
+  <span class="bg-[#161616] text-[#FFFBF0] px-3 py-1 rounded-full inline-block rotate-[-1deg] mt-">goblins</span><br>
+  <span class="inline-block mt-">into cash 💸</span>
+</h2>
+                <p class="text-[13px] mt-4 leading-[1.4] font-medium text-[#6B6258]">Snap a pic, get instant Resell / Repair / Reuse / Recycle verdict, chat with certified recyclers, and watch your impact stack.</p>
+                <div class="mt-6 flex flex-wrap gap-2">
+                    <span class="sticker lime">CPCB & R2 Certified ♻️</span>
+                    <span class="sticker lav">Gemini Vision ✨</span>
+                    <span class="sticker peach">4R Engine</span>
+                </div>
+                <div class="mt-8 p-4 rounded-[18px] bg-white border-2 border-black shadow-[4px_4px_0_#161616]">
+                    <p class="text-[11px] font-black uppercase opacity-60">Live impact</p>
+                    <div class="grid grid-cols-3 gap-2 mt-2 text-[11px] font-bold">
+                        <div><p class="text-[16px] font-black" style="font-family:'Syne'">14.8t</p><p class="opacity-60">e-waste diverted</p></div>
+                        <div><p class="text-[16px] font-black" style="font-family:'Syne'">98.4t</p><p class="opacity-60">CO₂ prevented</p></div>
+                        <div><p class="text-[16px] font-black" style="font-family:'Syne'">$284k</p><p class="opacity-60">cash unlocked</p></div>
+                    </div>
+                </div>
+            </div>
+            <div class="auth-right">
+                <div class="flex items-center justify-between">
+                    <div class="auth-tabs">
+                        <button class="auth-tab active" id="tab-login-btn" onclick="switchAuthTab('login')">Log In</button>
+                        <button class="auth-tab" id="tab-signup-btn" onclick="switchAuthTab('signup')">Sign Up</button>
+                    </div>
+                    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme"><i data-lucide="palette" class="w-5 h-5"></i></button>
+                </div>
+                <!-- LOGIN FORM -->
+                <form id="login-form" class="auth-form" onsubmit="handleLogin(event)">
+                    <div class="auth-field">
+                        <label>Email</label>
+                        <input class="auth-input" id="login-email" type="email" placeholder="you@college.edu" required>
+                    </div>
+                    <div class="auth-field">
+                        <label>Password</label>
+                        <input class="auth-input" id="login-password" type="password" placeholder="Your SPARK password" required>
+                    </div>
+                    <div id="login-error" class="hidden p-3 rounded-[14px] bg-[#FF4D4D]/10 border-2 border-[#FF4D4D] text-[12px] font-bold text-[#FF4D4D]"></div>
+                    <button type="submit" class="auth-submit" id="login-submit">Log In →</button>
+                    <p class="text-[11px] text-center font-bold opacity-60">SPARK password = specially crafted for this site • min 8 chars, upper+lower+number+symbol ✨</p>
+                </form>
+                <!-- SIGNUP FORM -->
+                <form id="signup-form" class="auth-form hidden" onsubmit="handleSignup(event)">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="auth-field">
+                            <label>Full Name</label>
+                            <input class="auth-input" id="signup-name" type="text" placeholder="Alex Morgan" required>
+                        </div>
+                        <div class="auth-field">
+                            <label>Username</label>
+                            <input class="auth-input" id="signup-username" type="text" placeholder="alex_eco" required pattern="[a-zA-Z0-9_]{3,20}">
+                        </div>
+                    </div>
+                    <div class="auth-field">
+                        <label>Email</label>
+                        <input class="auth-input" id="signup-email" type="email" placeholder="you@college.edu" required>
+                    </div>
+                    <div class="auth-field">
+                        <label>SPARK Password • specially made for this site</label>
+                        <input class="auth-input" id="signup-password" type="password" placeholder="Create strong password" required oninput="checkPasswordStrength(this.value)">
+                        <div class="pw-strength">
+                            <div class="pw-bar"><div class="pw-bar-fill" id="pw-fill"></div></div>
+                            <span id="pw-label" class="text-[10px] font-black">WEAK</span>
+                        </div>
+                        <div class="pw-hint" id="pw-hint">Min 8 chars • uppercase + lowercase + number + symbol (!@#$%) • can't contain username/email • this is your SPARK-only password 🔐</div>
+                    </div>
+                    <div class="auth-field">
+                        <label>Confirm Password</label>
+                        <input class="auth-input" id="signup-confirm" type="password" placeholder="Repeat password" required>
+                    </div>
+                    <div class="auth-field">
+                        <label>Preferred Theme</label>
+                        <div class="theme-chooser">
+                            <div class="theme-option selected" data-theme="genz" onclick="selectSignupTheme('genz')">
+                                <div class="dot"><i data-lucide="check" class="w-3 h-3 hidden check-icon"></i></div>
+                                <div><p>GenZ Curvy 🫧</p><p class="text-[10px] opacity-70 font-medium">Bubbly, 3D, lime pop</p></div>
+                            </div>
+                            <div class="theme-option" data-theme="light" onclick="selectSignupTheme('light')">
+                                <div class="dot"></div>
+                                <div><p>Original White 🤍</p><p class="text-[10px] opacity-70 font-medium">Clean, minimal</p></div>
+                            </div>
+                        </div>
+                        <input type="hidden" id="signup-theme" value="genz">
+                    </div>
+                    <div class="flex items-start gap-2 mt-1">
+                        <input type="checkbox" id="signup-terms" required class="mt-1">
+                        <label for="signup-terms" class="text-[11px] font-bold leading-[1.3]">I agree to CPCB-compliant recycling & that my SPARK password is unique to this site</label>
+                    </div>
+                    <div id="signup-error" class="hidden p-3 rounded-[14px] bg-[#FF4D4D]/10 border-2 border-[#FF4D4D] text-[12px] font-bold text-[#FF4D4D]"></div>
+                    <button type="submit" class="auth-submit" id="signup-submit">Create Account ✨</button>
+                </form>
+                <div class="mt-6 p-3 rounded-[16px] bg-[#FFFBF0] border-2 border-dashed border-black text-[11px] font-bold leading-[1.3]">
+                    <p>🔒 SPARK-only password rule: 8+ chars, must include A-Z, a-z, 0-9, and symbol. Why? So your e-waste wallet stays safe — not your Instagram password reuse.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="ticker-wrap" id="app-ticker">
+        <div class="max-w-[1320px] mx-auto px-3 flex items-center gap-3">
+            <div class="shrink-0 flex items-center gap-2 bg-[#FFFBF0] text-[#161616] border-2 border-[#161616] px-3 py-1.5 rounded-full font-bold text-[11px] shadow-[3px_3px_0_#161616]">
+                <span class="w-2 h-2 rounded-full bg-[#2FE1A5] animate-pulse border border-black"></span>
+                LIVE 4R IMPACT NETWORK
+            </div>
+            <div class="overflow-hidden flex-1 relative rounded-full">
+                <div class="ticker-animate flex items-center">
+                    <span class="ticker-pill lime"><i data-lucide="shield-check" class="w-3.5 h-3.5"></i> CPCB & R2 Certified • zero landfill fr fr</span>
+                    <span class="ticker-pill">E-Waste Diverted: <strong id="ticker-ewaste">14,820 kg</strong> ✨</span>
+                    <span class="ticker-pill peach">CO₂ Prevented: <strong id="ticker-co2">98,450 kg</strong> 🌱</span>
+                    <span class="ticker-pill lav">Gold Recovered: <strong id="ticker-gold">412.5 g</strong> 💅</span>
+                    <span class="ticker-pill aqa" style="background:var(--aqua)">Cash Unlocked: <strong id="ticker-cash">$284,500</strong> 💸</span>
+                    <span class="ticker-pill lime"><i data-lucide="shield-check" class="w-3.5 h-3.5"></i> CPCB & R2 Certified • zero landfill fr fr</span>
+                    <span class="ticker-pill">E-Waste Diverted: <strong>14,820 kg</strong> ✨</span>
+                </div>
+            </div>
+            <div class="hidden md:flex items-center gap-2 shrink-0">
+                <button onclick="switchTab('shop')" class="reckles-pill"><span class="reckles-coin">R</span><span data-reckles-balance>520</span> Reckles</button>
+                <button id="currency-toggle-btn" onclick="toggleCurrency()" class="px-3 py-1.5 rounded-full bg-white border-2 border-[#161616] text-[11px] font-bold shadow-[3px_3px_0_#161616]"> <span id="currency-label" class="font-extrabold">$ USD</span></button>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Switch theme"><i data-lucide="palette" class="w-4 h-4"></i></button>
+                <div id="user-chip-container"></div>
+            </div>
+        </div>
+    </div>
+    <header class="genz-header">
+        <div class="header-dock">
+            <div class="flex items-center gap-3 cursor-pointer shrink-0" onclick="switchTab('scanner')">
+                <div class="logo-blob"><span class="logo-mark">S</span></div>
+                <div class="hidden sm:block">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[22px] font-extrabold tracking-[-0.03em]" style="font-family:'Syne',sans-serif">SPARK</span>
+                        <span class="sticker lime text-[10px] !py-1 !px-2 !shadow-[2px_2px_0_#161616]">v3.1 4R Engine</span>
+                    </div>
+                    <p class="text-[11px] font-medium text-[#6B6258] -mt-1 hidden lg:block" style="font-family:'Fraunces',serif; font-style:italic">photo → cash → planet saved. no cap.</p>
+                </div>
+            </div>
+            <nav class="main-nav" aria-label="Primary navigation">
+                <button id="nav-scanner" onclick="switchTab('scanner')" class="nav-btn active"><i data-lucide="camera" class="w-4 h-4"></i> Scanner</button>
+                <button id="nav-matrix" onclick="switchTab('matrix')" class="nav-btn"><i data-lucide="layout-grid" class="w-4 h-4"></i> 4R Matrix</button>
+                <button id="nav-upcycle" onclick="switchTab('upcycle')" class="nav-btn"><i data-lucide="wrench" class="w-4 h-4"></i> Upcycle Lab</button>
+                <button id="nav-vault" onclick="switchTab('vault')" class="nav-btn relative"><i data-lucide="box" class="w-4 h-4"></i> Drawer <span id="vault-count-badge" class="hidden absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#E8FF86] text-[#161616] border-2 border-[#161616] grid place-items-center text-[10px] font-black">0</span></button>
+                <button id="nav-impact" onclick="switchTab('impact')" class="nav-btn"><i data-lucide="trophy" class="w-4 h-4"></i> Impact</button>
+                <button id="nav-locator" onclick="switchTab('locator')" class="nav-btn"><i data-lucide="map-pin" class="w-4 h-4"></i> Hubs</button>
+                <button id="nav-chat" onclick="switchTab('chat')" class="nav-btn"><i data-lucide="message-circle" class="w-4 h-4"></i> Chat <span id="chat-unread-badge" class="hidden w-2 h-2 bg-[#FF4D4D] rounded-full border border-black ml-1"></span></button>
+                <button id="nav-shop" onclick="switchTab('shop')" class="nav-btn"><i data-lucide="shopping-bag" class="w-4 h-4"></i> Shop</button>
+                <button id="nav-admin" onclick="switchTab('admin')" class="nav-btn"><i data-lucide="layout-dashboard" class="w-4 h-4"></i> Admin</button>
+            </nav>
+            <div class="flex items-center gap-2 lg:hidden shrink-0">
+                <button id="mobile-quick-scan" onclick="switchTab('scanner')" class="px-3 py-2 rounded-full bg-[#E8FF86] border-2 border-[#161616] font-black text-xs shadow-[3px_3px_0_#161616] flex items-center gap-1"><i data-lucide="camera" class="w-3.5 h-3.5"></i> Scan</button>
+                <button id="mobile-menu-toggle" onclick="toggleMobileNav()" class="w-9 h-9 rounded-full bg-white border-2 border-[#161616] grid place-items-center shadow-[3px_3px_0_#161616]"><i data-lucide="menu" class="w-5 h-5"></i></button>
+            </div>
+        </div>
+        <div id="mobile-nav" class="hidden">
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="switchTab('scanner'); toggleMobileNav()" class="text-left px-3 py-2.5 rounded-full bg-[#161616] text-[#FFFBF0] font-bold flex items-center gap-2"><i data-lucide="camera" class="w-4 h-4 text-[#E8FF86]"></i> Scanner</button>
+                <button onclick="switchTab('matrix'); toggleMobileNav()" class="text-left px-3 py-2.5 rounded-full bg-white border-2 border-[#161616] font-bold flex items-center gap-2"><i data-lucide="layout-grid" class="w-4 h-4"></i> Matrix</button>
+                <button onclick="switchTab('chat'); toggleMobileNav()" class="text-left px-3 py-2.5 rounded-full bg-white border-2 border-[#161616] font-bold flex items-center gap-2"><i data-lucide="message-circle" class="w-4 h-4"></i> Chat</button>
+                <button onclick="switchTab('vault'); toggleMobileNav()" class="text-left px-3 py-2.5 rounded-full bg-white border-2 border-[#161616] font-bold flex items-center gap-2"><i data-lucide="box" class="w-4 h-4"></i> Drawer</button>
+            </div>
+            <div class="mt-3 flex gap-2">
+                <button onclick="toggleCurrency()" class="flex-1 py-2 rounded-full bg-[#FFFBF0] border-2 border-[#161616] font-bold text-xs"><span id="mobile-currency-label">$ USD</span> • toggle</button>
+                <button onclick="toggleTheme()" class="flex-1 py-2 rounded-full bg-[#D9CCFF] border-2 border-[#161616] font-bold text-xs flex items-center justify-center gap-1"><i data-lucide="palette" class="w-3 h-3"></i> Theme</button>
+                <button onclick="handleLogout()" class="flex-1 py-2 rounded-full bg-[#161616] text-white font-bold text-xs">Logout</button>
+            </div>
+        </div>
+    </header>
+    <main class="flex-1 max-w-[1320px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-[5]">
+        <section id="tab-scanner" class="tab-content space-y-6">
+            <div class="glass-panel p-6 md:p-7 rounded-[32px] flex flex-col md:flex-row md:items-center justify-between gap-5">
+                <div class="flex-1">
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="sticker lime">AI MAGIC ✨</span>
+                        <span class="sticker lav">Instant Assessment</span>
+                        <span class="text-[12px] font-medium text-[#8B8278]" style="font-family:'Fraunces',serif; font-style:italic">— snap, scan, bag secured</span>
+                    </div>
+                    <h1 class="text-[28px] md:text-[36px] font-extrabold leading-[0.95] tracking-[-0.04em]" style="font-family:'Syne',sans-serif">
+                        Visual diagnostics that<br>
+                        <span class="inline-block bg-[#161616] text-[#FFFBF0] px-3 py-1 rounded-full rotate-[-1.2deg]">actually</span> slaps.
+                    </h1>
+                    <p class="text-[14px] text-[#6B6258] mt-3 max-w-[560px] leading-[1.4]">Drop a pic of that drawer goblin tech. Our vision + Gemini brain figures model, damage, and whether you should resell, repair, reuse or recycle — in like 2 seconds.</p>
+                </div>
+                <div class="shrink-0 bg-[#FFFBF0] p-3 rounded-[20px] border-2 border-[#161616] shadow-[5px_5px_0_#161616] w-full md:w-auto">
+                    <p class="text-[11px] font-black uppercase tracking-wider flex items-center justify-between gap-3">Try a preset <span class="text-[10px] bg-[#E8FF86] border border-black px-2 py-0.5 rounded-full">1-tap demo</span></p>
+                    <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 mt-2">
+                        <button onclick="loadDemoPreset('iphone_x')" class="preset-btn flex flex-col items-center gap-1 p-2.5 rounded-[16px] bg-white border-2 border-[#161616] shadow-[3px_3px_0_#161616]"><span class="w-8 h-8 rounded-full bg-[#FFD2B3] border-2 border-black grid place-items-center"><i data-lucide="smartphone" class="w-4 h-4"></i></span><span class="text-[10px] font-bold">Cracked iPhone</span></button>
+                        <button onclick="loadDemoPreset('galaxy_s9')" class="preset-btn flex flex-col items-center gap-1 p-2.5 rounded-[16px] bg-white border-2 border-[#161616] shadow-[3px_3px_0_#161616]"><span class="w-8 h-8 rounded-full bg-[#A6FFDF] border-2 border-black grid place-items-center"><i data-lucide="smartphone" class="w-4 h-4"></i></span><span class="text-[10px] font-bold">Galaxy S9</span></button>
+                        <button onclick="loadDemoPreset('ipad_mini')" class="preset-btn flex flex-col items-center gap-1 p-2.5 rounded-[16px] bg-white border-2 border-[#161616] shadow-[3px_3px_0_#161616]"><span class="w-8 h-8 rounded-full bg-[#D9CCFF] border-2 border-black grid place-items-center"><i data-lucide="tablet" class="w-4 h-4"></i></span><span class="text-[10px] font-bold">iPad Mini</span></button>
+                        <button onclick="loadDemoPreset('sony_headphones')" class="preset-btn flex flex-col items-center gap-1 p-2.5 rounded-[16px] bg-white border-2 border-[#161616] shadow-[3px_3px_0_#161616]"><span class="w-8 h-8 rounded-full bg-[#FFF07A] border-2 border-black grid place-items-center"><i data-lucide="headphones" class="w-4 h-4"></i></span><span class="text-[10px] font-bold">Sony XM3</span></button>
+                        <button onclick="loadDemoPreset('dell_laptop')" class="preset-btn flex flex-col items-center gap-1 p-2.5 rounded-[16px] bg-white border-2 border-[#161616] shadow-[3px_3px_0_#161616]"><span class="w-8 h-8 rounded-full bg-[#FFC5E7] border-2 border-black grid place-items-center"><i data-lucide="laptop" class="w-4 h-4"></i></span><span class="text-[10px] font-bold">Dell 15</span></button>
+                        <button onclick="loadDemoPreset('swollen_phone')" class="preset-btn flex flex-col items-center gap-1 p-2.5 rounded-[16px] bg-[#161616] text-white border-2 border-[#161616] shadow-[3px_3px_0_#FF8A8A]"><span class="w-8 h-8 rounded-full bg-[#FF4D4D] border-2 border-black grid place-items-center animate-pulse"><i data-lucide="alert-triangle" class="w-4 h-4 text-white"></i></span><span class="text-[10px] font-bold">Swollen ⚠️</span></button>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-7 space-y-4">
+                    <div class="glass-panel p-4 rounded-[32px] relative overflow-hidden min-h-[460px] flex flex-col" id="scanner-view-container">
+                        <div class="absolute top-5 left-5 w-8 h-8 border-t-[3px] border-l-[3px] border-[#161616] rounded-tl-[16px] z-20"></div>
+                        <div class="absolute top-5 right-5 w-8 h-8 border-t-[3px] border-r-[3px] border-[#161616] rounded-tr-[16px] z-20"></div>
+                        <div class="absolute bottom-5 left-5 w-8 h-8 border-b-[3px] border-l-[3px] border-[#161616] rounded-bl-[16px] z-20"></div>
+                        <div class="absolute bottom-5 right-5 w-8 h-8 border-b-[3px] border-r-[3px] border-[#161616] rounded-br-[16px] z-20"></div>
+                        <div id="scan-laser-line" class="scan-laser hidden"></div>
+                        <video id="webcam-feed" class="w-full h-full object-cover rounded-[24px] hidden absolute inset-3 z-0" autoplay playsinline muted></video>
+                        <div id="image-preview-wrapper" class="relative w-full h-[380px] flex items-center justify-center rounded-[28px] bg-[#FFFBF0] border-[2px] border-[#161616] border-dashed overflow-hidden">
+                            <div id="upload-placeholder" class="text-center p-6 space-y-4 cursor-pointer" onclick="triggerFileInput()">
+                                <div class="w-20 h-20 rounded-[22px] bg-[#161616] border-2 border-[#161616] shadow-[4px_4px_0_#E8FF86] flex items-center justify-center mx-auto text-[#FFFBF0] rotate-[-3deg]"><i data-lucide="cloud-upload" class="w-9 h-9"></i></div>
+                                <div><p class="text-[18px] font-extrabold tracking-[-0.02em]" style="font-family:'Syne'">Drop your gadget here bestie</p><p class="text-[12px] text-[#8B8278] mt-1">JPG, PNG, WEBP • max 10MB • auto model detection on fleek</p></div>
+                                <div class="sticker inline-flex" style="background:var(--aqua)"><i data-lucide="camera" class="w-3.5 h-3.5"></i> Camera enabled — say cheese</div>
+                            </div>
+                            <img id="scanned-image-preview" class="hidden w-full h-full object-contain p-3 relative z-10 rounded-[20px]" alt="Scanned Gadget">
+                            <div id="hud-bounding-box" class="hidden absolute border-[2.5px] border-dashed border-[#161616] bg-[#E8FF86]/30 rounded-[18px] z-20 transition-all duration-500 pointer-events-none">
+                                <div class="absolute -top-8 left-2 bg-[#161616] text-[#FFFBF0] text-[11px] px-3 py-1 rounded-full border-2 border-[#161616] flex items-center gap-2 shadow-[3px_3px_0_#E8FF86] font-bold">
+                                    <span class="w-2 h-2 rounded-full bg-[#E8FF86] animate-ping"></span>
+                                    <span id="hud-detected-tag">DETECTED: iPhone X (64GB)</span>
+                                    <span class="bg-[#E8FF86] text-black px-1.5 py-0.5 rounded-full text-[10px]" id="hud-confidence">98.4%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
+                        <div class="flex flex-wrap items-center justify-between w-full mt-4 gap-2 z-20">
+                            <div class="flex items-center gap-2">
+                                <button onclick="triggerFileInput()" class="bubbly px-4 py-2.5 bg-white text-[#161616] text-xs flex items-center gap-1.5"><i data-lucide="upload" class="w-4 h-4"></i> Choose file</button>
+                                <button id="webcam-btn" onclick="toggleWebcam()" class="bubbly px-4 py-2.5 bg-[#D9CCFF] text-[#161616] text-xs flex items-center gap-1.5"><i data-lucide="video" class="w-4 h-4"></i> <span id="webcam-btn-text">Start Camera</span></button>
+                            </div>
+                            <button id="run-ai-btn" onclick="executeAIScan()" class="bubbly px-6 py-3 text-[12px] uppercase tracking-wider flex items-center gap-2"><i data-lucide="cpu" class="w-4 h-4"></i> Run AI Assessment ✨</button>
+                        </div>
+                    </div>
+                    <div id="safety-alert-banner" class="hidden bg-[#FF4D4D] border-2 border-[#161616] rounded-[20px] p-4 flex items-start gap-3 text-[13px] text-white shadow-[5px_5px_0_#161616] rotate-[-.6deg]">
+                        <span class="w-10 h-10 rounded-full bg-white border-2 border-black grid place-items-center shrink-0"><i data-lucide="alert-octagon" class="w-5 h-5 text-[#FF4D4D]"></i></span>
+                        <div><p class="font-black">HAZARD WARNING: Swollen Lithium Battery Detected! 🚨</p><p class="opacity-90 mt-1 leading-snug">Don't squeeze, don't ship normal. Needs certified CPCB hazardous pickup asap — no cap.</p></div>
+                    </div>
+                </div>
+                <div class="lg:col-span-5 flex flex-col gap-4">
+                    <div class="glass-panel p-5 rounded-[28px] space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2"><span class="w-8 h-8 rounded-full bg-[#161616] text-[#E8FF86] grid place-items-center"><i data-lucide="sliders" class="w-4 h-4"></i></span><h3 class="font-extrabold text-[15px] tracking-[-0.02em]" style="font-family:'Syne'">Damage Diagnostics</h3></div>
+                            <span class="sticker !py-1 text-[10px]">AI Verified ✔️</span>
+                        </div>
+                        <div class="space-y-4 text-[12px]">
+                            <div><div class="flex justify-between font-bold mb-2"><span>Screen cracks / damage</span><span class="bg-[#FFD2B3] border border-black px-2 py-0.5 rounded-full text-[11px]" id="slider-screen-val">45%</span></div><input type="range" id="slider-screen" min="0" max="100" value="45" oninput="updateDiagnosticsFromSliders()" class="w-full"></div>
+                            <div><div class="flex justify-between font-bold mb-2"><span>Body wear & tear</span><span class="bg-[#A6FFDF] border border-black px-2 py-0.5 rounded-full text-[11px]" id="slider-wear-val">30%</span></div><input type="range" id="slider-wear" min="0" max="100" value="30" oninput="updateDiagnosticsFromSliders()" class="w-full"></div>
+                            <div><div class="flex justify-between font-bold mb-2"><span>Battery health</span><span class="bg-[#FFF07A] border border-black px-2 py-0.5 rounded-full text-[11px]" id="slider-battery-val">72%</span></div><input type="range" id="slider-battery" min="10" max="100" value="72" oninput="updateDiagnosticsFromSliders()" class="w-full"></div>
+                            <div><div class="flex justify-between font-bold mb-2"><span>Ports & buttons</span><span class="bg-[#D9CCFF] border border-black px-2 py-0.5 rounded-full text-[11px]" id="slider-port-val">85%</span></div><input type="range" id="slider-port" min="0" max="100" value="85" oninput="updateDiagnosticsFromSliders()" class="w-full"></div>
+                        </div>
+                        <div class="pt-2 border-t-2 border-dashed border-[#EDE6DA] flex items-center justify-center">
+                            <div class="w-full h-48 bg-[#FFFBF0] rounded-[20px] border-2 border-[#161616] p-2 shadow-[4px_4px_0_#161616]"><canvas id="diagnosticRadarChart"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="glass-panel-glow p-5 rounded-[24px] flex items-center justify-between gap-3">
+                        <div>
+                            <span class="text-[10px] font-black uppercase tracking-widest opacity-60">Engine says...</span>
+                            <h4 id="summary-best-route-title" class="text-[16px] font-extrabold mt-1 flex items-center gap-1.5" style="font-family:'Syne'"><i data-lucide="check-circle-2" class="w-5 h-5"></i> Optimal Route: RESELL</h4>
+                            <p id="summary-best-route-desc" class="text-[12px] mt-1 text-[#6B6258]">Est. Value: <strong id="summary-est-val" class="text-[#161616] bg-[#E8FF86] px-2 py-0.5 rounded-full border border-black">$145 USD</strong></p>
+                        </div>
+                        <button onclick="switchTab('matrix')" class="bubbly px-4 py-2.5 bg-[#161616] text-white text-xs flex items-center gap-1.5 shrink-0">Explore 4R <i data-lucide="arrow-right" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section id="tab-matrix" class="tab-content hidden space-y-6">
+            <div class="glass-panel p-6 rounded-[28px] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-2"><span class="sticker" style="background:var(--aqua)"><i data-lucide="cpu" class="w-4 h-4"></i> REAL-TIME 4R ENGINE</span><span class="text-[12px]" style="font-family:'Fraunces'; font-style:italic">— we did the math</span></div>
+                    <h2 class="text-[28px] font-extrabold tracking-[-0.03em] mt-2" style="font-family:'Syne'" id="matrix-gadget-title">Active Device: Apple iPhone X (64GB)</h2>
+                    <p class="text-[12px] text-[#6B6258] mt-1">Comparing payout, repair feasibility, DIY potential, and CPCB recycling benefits. bestie approved.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="saveActiveDeviceToVault()" class="bubbly px-4 py-2.5 bg-[#E8FF86] text-xs flex items-center gap-1.5"><i data-lucide="bookmark" class="w-4 h-4"></i> Save to Drawer</button>
+                    <button onclick="switchTab('scanner')" class="bubbly px-4 py-2.5 bg-white text-xs flex items-center gap-1.5"><i data-lucide="camera" class="w-4 h-4"></i> Scan Another</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div id="card-route-resell" class="glass-panel p-6 rounded-[28px] flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-center gap-3"><div class="w-12 h-12 rounded-[16px] bg-[#161616] text-[#E8FF86] border-2 border-black shadow-[3px_3px_0_#E8FF86] grid place-items-center"><i data-lucide="dollar-sign" class="w-6 h-6"></i></div><div><span class="text-[10px] font-black uppercase tracking-widest opacity-60">Route #1</span><h3 class="text-[18px] font-extrabold" style="font-family:'Syne'">RESELL & BUYBACK</h3></div></div>
+                            <span id="badge-resell-status" class="sticker lime !rotate-[2deg]">BEST CASH 💸</span>
+                        </div>
+                        <div class="bg-[#FFFBF0] p-4 rounded-[18px] border-2 border-black space-y-1"><p class="text-[11px] font-bold opacity-60">Instant Buyback Valuation</p><p class="text-[26px] font-black tracking-[-0.03em]" style="font-family:'Syne'" id="resell-val-display">$145.00</p><p class="text-[11px] text-[#6B6258]">Market demand high for refurb displays & boards. no cap.</p></div>
+                        <div class="space-y-2"><p class="text-[11px] font-black uppercase">Live Price Match:</p><div class="space-y-2 text-[12px] font-bold"><div class="flex justify-between items-center p-2.5 rounded-full bg-white border-2 border-black shadow-[2px_2px_0_#161616]"><span>Cashify</span><span id="resell-price-cashify">$145</span></div><div class="flex justify-between items-center p-2.5 rounded-full bg-[#FFFBF0] border-2 border-black"><span>BackMarket</span><span id="resell-price-backmarket">$137</span></div><div class="flex justify-between items-center p-2.5 rounded-full bg-[#FFFBF0] border-2 border-dashed border-black"><span>eBay Private</span><span id="resell-price-ebay">$156</span></div></div></div>
+                    </div>
+                    <div class="pt-4 mt-4 border-t-2 border-dashed border-[#EDE6DA]"><button onclick="openBuybackModal()" class="bubbly w-full py-3 bg-[#E8FF86] text-xs flex items-center justify-center gap-1.5"><i data-lucide="banknote" class="w-4 h-4"></i> Lock Price & Sell Now</button></div>
+                </div>
+                <div id="card-route-repair" class="glass-panel p-6 rounded-[28px] flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex items-start justify-between"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-[16px] bg-[#161616] text-[#A6FFDF] border-2 border-black shadow-[3px_3px_0_#A6FFDF] grid place-items-center"><i data-lucide="wrench" class="w-6 h-6"></i></div><div><span class="text-[10px] font-black uppercase opacity-60">Route #2</span><h3 class="text-[18px] font-extrabold" style="font-family:'Syne'">REPAIR</h3></div></div><span id="badge-repair-status" class="sticker !bg-[#A6FFDF]">FIX IT 🔧</span></div>
+                        <div class="bg-[#FFFBF0] p-4 rounded-[18px] border-2 border-black space-y-2"><p class="text-[11px] font-bold opacity-60">Estimated Repair Cost</p><p class="text-[26px] font-black" style="font-family:'Syne'" id="repair-cost-display">$65</p><div class="w-full h-3 rounded-full bg-[#EDE6DA] border-2 border-black overflow-hidden"><div id="repair-ratio-bar" class="h-full bg-[#A6FFDF] border-r-2 border-black" style="width:45%"></div></div><p class="text-[11px] font-bold" id="repair-ratio-label">Repair cost is 45% of replacement</p><p class="text-[11px] font-bold mt-1">vs <span id="repair-vs-replace-display">$599 Replacement</span></p></div>
+                    </div>
+                    <div class="pt-4 mt-4 border-t-2 border-dashed border-[#EDE6DA]"><button onclick="switchTab('locator')" class="bubbly w-full py-3 bg-[#A6FFDF] text-xs flex items-center justify-center gap-1.5"><i data-lucide="map-pin" class="w-4 h-4"></i> Find Repair Hubs</button></div>
+                </div>
+                <div id="card-route-reuse" class="glass-panel p-6 rounded-[28px] flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex items-start justify-between"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-[16px] bg-[#161616] text-[#D9CCFF] border-2 border-black shadow-[3px_3px_0_#D9CCFF] grid place-items-center"><i data-lucide="lightbulb" class="w-6 h-6"></i></div><div><span class="text-[10px] font-black uppercase opacity-60">Route #3</span><h3 class="text-[18px] font-extrabold" style="font-family:'Syne'">REUSE / UPCYCLE</h3></div></div><span id="badge-reuse-status" class="sticker lav">DIY BESTIE 🛠️</span></div>
+                        <div class="bg-[#FFFBF0] p-4 rounded-[18px] border-2 border-black"><p class="text-[13px] font-black flex items-center gap-1.5" id="upcycle-project-name"><i data-lucide="sparkles" class="w-4 h-4"></i> Smart Home AI Camera</p><p class="text-[11px] text-[#6B6258] mt-1" id="upcycle-project-desc">Convert high-res camera into IP motion-sensing security camera.</p></div>
+                    </div>
+                    <div class="pt-4 mt-4 border-t-2 border-dashed border-[#EDE6DA]"><button onclick="switchTab('upcycle')" class="bubbly w-full py-3 bg-[#D9CCFF] text-xs flex items-center justify-center gap-1.5"><i data-lucide="wand-2" class="w-4 h-4"></i> Open Upcycle Studio</button></div>
+                </div>
+                <div id="card-route-recycle" class="glass-panel p-6 rounded-[28px] flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex items-start justify-between"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-[16px] bg-[#161616] text-[#FFD2B3] border-2 border-black shadow-[3px_3px_0_#FFD2B3] grid place-items-center"><i data-lucide="recycle" class="w-6 h-6"></i></div><div><span class="text-[10px] font-black uppercase opacity-60">Route #4</span><h3 class="text-[18px] font-extrabold" style="font-family:'Syne'">RECYCLE (CPCB / R2)</h3></div></div><span id="badge-recycle-status" class="sticker peach">ZERO-LANDFILL ♻️</span></div>
+                        <div class="bg-[#FFFBF0] p-4 rounded-[18px] border-2 border-black space-y-2">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="p-2.5 rounded-[14px] bg-white border-2 border-black text-[11px]"><span class="block opacity-60 font-bold">CO₂ Saved</span><strong class="text-[14px]" id="recycle-co2-val">34.2 kg</strong></div>
+                                <div class="p-2.5 rounded-[14px] bg-white border-2 border-black text-[11px]"><span class="block opacity-60 font-bold">Gold Recovered</span><strong class="text-[14px]" id="recycle-gold-val">0.035 g</strong></div>
+                            </div>
+                        </div>
+                        <div class="space-y-1 text-[12px] font-medium"><p class="flex items-center gap-1.5"><i data-lucide="shield-check" class="w-4 h-4"></i> Doorstep pickup by certified recyclers</p><p class="flex items-center gap-1.5"><i data-lucide="file-check" class="w-4 h-4"></i> Official destruction certificate</p></div>
+                    </div>
+                    <div class="pt-4 mt-4 border-t-2 border-dashed border-[#EDE6DA]"><button onclick="openRecyclePickupModal()" class="bubbly w-full py-3 bg-[#FFD2B3] text-xs flex items-center justify-center gap-1.5"><i data-lucide="truck" class="w-4 h-4"></i> Schedule Doorstep Pickup</button></div>
+                </div>
+            </div>
+        </section>
+        <section id="tab-upcycle" class="tab-content hidden space-y-6">
+            <div class="glass-panel p-6 rounded-[28px] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div><h2 class="text-[28px] font-extrabold flex items-center gap-2 tracking-[-0.03em]" style="font-family:'Syne'"><span class="w-10 h-10 rounded-full bg-[#D9CCFF] border-2 border-black grid place-items-center shadow-[3px_3px_0_#161616]"><i data-lucide="wrench" class="w-5 h-5"></i></span> DIY Upcycle Lab</h2><p class="text-[12px] text-[#6B6258] mt-1">Turn dead tech into smart home hubs, cams, dashcams, servers. Pinterest but make it useful.</p></div>
+                <span class="sticker lav">10+ Verified Blueprints 📚</span>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-5 space-y-3">
+                    <h3 class="text-[11px] font-black uppercase tracking-widest opacity-60">Select blueprint:</h3>
+                    <div onclick="selectDIYProject('smart_cam')" id="diy-card-smart_cam" class="diy-selector-card p-4 rounded-[20px] cursor-pointer flex items-start gap-3"><div class="w-11 h-11 rounded-[14px] bg-[#D9CCFF] border-2 border-black grid place-items-center shrink-0"><i data-lucide="video" class="w-5 h-5"></i></div><div class="flex-1"><h4 class="font-extrabold text-[14px]">Smart Home AI Security Camera</h4><p class="text-[11px] text-[#6B6258] mt-0.5">For old phones. HD feed + motion alerts.</p><span class="mt-2 inline-block px-2.5 py-1 rounded-full text-[10px] font-black bg-white border-2 border-black">Easy • 15 Mins</span></div></div>
+                    <div onclick="selectDIYProject('desk_hud')" id="diy-card-desk_hud" class="diy-selector-card p-4 rounded-[20px] cursor-pointer flex items-start gap-3"><div class="w-11 h-11 rounded-[14px] bg-[#A6FFDF] border-2 border-black grid place-items-center shrink-0"><i data-lucide="layout" class="w-5 h-5"></i></div><div class="flex-1"><h4 class="font-extrabold text-[14px]">Weather & Calendar Wall HUD</h4><p class="text-[11px] text-[#6B6258] mt-0.5">For old tablets. Live weather + calendar.</p><span class="mt-2 inline-block px-2.5 py-1 rounded-full text-[10px] font-black bg-white border-2 border-black">Easy • 20 Mins</span></div></div>
+                    <div onclick="selectDIYProject('home_nas')" id="diy-card-home_nas" class="diy-selector-card p-4 rounded-[20px] cursor-pointer flex items-start gap-3"><div class="w-11 h-11 rounded-[14px] bg-[#E8FF86] border-2 border-black grid place-items-center shrink-0"><i data-lucide="hard-drive" class="w-5 h-5"></i></div><div class="flex-1"><h4 class="font-extrabold text-[14px]">Personal Cloud NAS & Server</h4><p class="text-[11px] text-[#6B6258] mt-0.5">For old laptops. Nextcloud backup.</p><span class="mt-2 inline-block px-2.5 py-1 rounded-full text-[10px] font-black bg-white border-2 border-black">Medium • 45 Mins</span></div></div>
+                    <div onclick="selectDIYProject('car_dashcam')" id="diy-card-car_dashcam" class="diy-selector-card p-4 rounded-[20px] cursor-pointer flex items-start gap-3"><div class="w-11 h-11 rounded-[14px] bg-[#FFD2B3] border-2 border-black grid place-items-center shrink-0"><i data-lucide="car" class="w-5 h-5"></i></div><div class="flex-1"><h4 class="font-extrabold text-[14px]">Auto-Loop Vehicle Dashcam</h4><p class="text-[11px] text-[#6B6258] mt-0.5">GPS + impact clip saving.</p><span class="mt-2 inline-block px-2.5 py-1 rounded-full text-[10px] font-black bg-white border-2 border-black">Easy • 10 Mins</span></div></div>
+                </div>
+                <div class="lg:col-span-7"><div class="glass-panel p-6 rounded-[28px] min-h-[520px]" id="diy-guide-container"></div></div>
+            </div>
+        </section>
+        <section id="tab-vault" class="tab-content hidden space-y-6">
+            <div class="glass-panel p-6 rounded-[28px] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div><h2 class="text-[28px] font-extrabold flex items-center gap-2 tracking-[-0.03em]" style="font-family:'Syne'"><span class="w-10 h-10 rounded-full bg-[#E8FF86] border-2 border-black grid place-items-center shadow-[3px_3px_0_#161616]"><i data-lucide="box" class="w-5 h-5"></i></span> My E-Waste Drawer</h2><p class="text-[12px] text-[#6B6258] mt-1">Track forgotten gadgets. See unlocked cash & planet points. It's giving inventory.</p></div>
+                <div class="flex items-center gap-2"><button onclick="exportVaultSummaryReport()" class="bubbly px-4 py-2.5 bg-white text-xs flex items-center gap-1.5"><i data-lucide="download" class="w-4 h-4"></i> Export Eco Cert</button><button onclick="openAddManualGadgetModal()" class="bubbly px-4 py-2.5 bg-[#161616] text-white text-xs flex items-center gap-1.5"><i data-lucide="plus" class="w-4 h-4"></i> Add Gadget</button></div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass-panel p-5 rounded-[22px]"><span class="text-[10px] font-black uppercase tracking-widest opacity-60">Gadgets in vault</span><p class="text-[28px] font-black mt-1" style="font-family:'Syne'" id="vault-stat-count">0</p></div>
+                <div class="glass-panel p-5 rounded-[22px] bg-[#E8FF86] !shadow-[5px_5px_0_#161616]"><span class="text-[10px] font-black uppercase">Unlocked cash</span><p class="text-[28px] font-black mt-1" style="font-family:'Syne'" id="vault-stat-cash">$0</p></div>
+                <div class="glass-panel p-5 rounded-[22px] bg-[#A6FFDF] !shadow-[5px_5px_0_#161616]"><span class="text-[10px] font-black uppercase">CO₂ prevented</span><p class="text-[28px] font-black mt-1" style="font-family:'Syne'" id="vault-stat-co2">0 kg</p></div>
+                <div class="glass-panel p-5 rounded-[22px] bg-[#FFF07A] !shadow-[5px_5px_0_#161616]"><span class="text-[10px] font-black uppercase">Gold recoverable</span><p class="text-[28px] font-black mt-1" style="font-family:'Syne'" id="vault-stat-gold">0.00 g</p></div>
+            </div>
+            <div class="glass-panel rounded-[28px] overflow-hidden">
+                <div class="p-5 border-b-2 border-black flex items-center justify-between"><h3 class="font-black text-[14px] flex items-center gap-2"><i data-lucide="list" class="w-4 h-4"></i> Stored Electronics</h3><div class="flex items-center gap-2"><span class="text-[11px] font-bold">Filter:</span><select id="vault-filter" onchange="renderVaultTable()" class="bg-white border-2 border-black text-[12px] font-bold rounded-full px-3 py-1.5"><option value="ALL">All Statuses</option><option value="SCANNED">Scanned</option><option value="RESOLD">Resold</option><option value="REPAIRED">Repaired</option><option value="UPCYCLED">Upcycled</option><option value="RECYCLED">Recycled</option></select></div></div>
+                <div class="overflow-x-auto"><table class="w-full text-left text-[12px]"><thead class="bg-[#FFFBF0] text-[#6B6258] font-black uppercase text-[10px] border-b-2 border-black"><tr><th class="p-4">Device</th><th class="p-4">Brand</th><th class="p-4">Condition</th><th class="p-4">Resell Val</th><th class="p-4">Best Route</th><th class="p-4">Action</th></tr></thead><tbody id="vault-table-body" class="divide-y divide-[#EDE6DA]"></tbody></table></div>
+            </div>
+        </section>
+        <section id="tab-chat" class="tab-content hidden space-y-6">
+            <div class="glass-panel p-6 rounded-[28px] flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#D9CCFF] !shadow-[7px_7px_0_#161616]">
+                <div><h2 class="text-[28px] font-extrabold flex items-center gap-2 tracking-[-0.04em]" style="font-family:'Syne'"><span class="w-10 h-10 rounded-full bg-[#161616] text-[#D9CCFF] border-2 border-black grid place-items-center shadow-[3px_3px_0_#fff]"><i data-lucide="message-circle" class="w-5 h-5"></i></span> Chat with Certified Recyclers</h2><p class="text-[12px] font-bold mt-1">Real-time Firebase chat • Ask about pickup, pricing, CPCB certs • No cap, just verified pros</p></div>
+                <div class="flex items-center gap-2"><span class="sticker !bg-[#fff]">Live • Firebase</span><span class="sticker lime" id="chat-user-count">3 recyclers online</span></div>
+            </div>
+            <div class="chat-layout">
+                <div class="chat-sidebar">
+                    <div class="chat-sidebar-header">
+                        <span>Recyclers & Admins</span>
+                        <span class="text-[10px] bg-[#E8FF86] border border-black px-2 py-0.5 rounded-full">CPCB VERIFIED</span>
+                    </div>
+                    <div class="p-2 border-b-2 border-black">
+                        <input id="chat-search" placeholder="Search recycler..." class="w-full px-3 py-2 rounded-full border-2 border-black text-[12px] font-bold" oninput="filterChatContacts(this.value)">
+                    </div>
+                    <div class="chat-contacts" id="chat-contacts-list">
+                        <!-- populated by JS -->
+                    </div>
+                    <div class="p-3 border-t-2 border-black bg-[#FFFBF0]">
+                        <p class="text-[10px] font-black uppercase opacity-60">Your recent chats</p>
+                        <div id="recent-chats" class="mt-2 space-y-1"></div>
+                    </div>
+                </div>
+                <div class="chat-main">
+                    <div class="chat-main-header" id="chat-main-header">
+                        <div class="w-10 h-10 rounded-full bg-[#E8FF86] border-2 border-black grid place-items-center font-black">S</div>
+                        <div><p class="text-[14px]" id="chat-active-name">Select a recycler to start chatting</p><p class="text-[11px] opacity-60" id="chat-active-sub">CPCB certified • usually replies in 5m</p></div>
+                        <div class="ml-auto flex gap-2">
+                            <button class="bubbly px-3 py-1.5 bg-white text-[11px]" onclick="clearChat()"><i data-lucide="trash-2" class="w-3 h-3"></i> Clear</button>
+                        </div>
+                    </div>
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="chat-empty">
+                            <div><div class="w-16 h-16 rounded-full bg-[#D9CCFF] border-2 border-black mx-auto grid place-items-center shadow-[4px_4px_0_#161616] mb-3"><i data-lucide="message-circle" class="w-8 h-8"></i></div><p class="font-black" style="font-family:'Syne'">No chat selected</p><p class="text-[12px] text-[#6B6258] mt-1 max-w-[280px]">Pick a certified recycler from left. Your messages are saved in Firebase Firestore in real-time.</p></div>
+                        </div>
+                    </div>
+                    <div class="chat-input-bar">
+                        <input id="chat-input" class="chat-input" placeholder="Type a message to recycler..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+                        <button class="chat-send" onclick="sendChatMessage()"><i data-lucide="send" class="w-5 h-5"></i></button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section id="tab-impact" class="tab-content hidden space-y-6">
+            <div class="glass-panel p-6 rounded-[28px] flex items-center justify-between gap-4 bg-[#161616] !text-[#FFFBF0] !border-[#161616] !shadow-[7px_7px_0_#E8FF86]">
+                <div><h2 class="text-[28px] font-extrabold flex items-center gap-2 tracking-[-0.03em]" style="font-family:'Syne'"><span class="w-10 h-10 rounded-full bg-[#E8FF86] text-black grid place-items-center"><i data-lucide="trophy" class="w-5 h-5"></i></span> Impact & Badges</h2><p class="text-[12px] text-[#FFFBF0]/70 mt-1">Your circular economy flex. Levels, badges, leaderboard. period.</p></div>
+                <span class="sticker !bg-[#E8FF86] !text-black">Level 4 Eco-Star 🌟</span>
+            </div>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass-panel p-5 rounded-[22px] bg-[#A6FFDF]"><div class="flex items-center gap-2 font-black text-[11px] uppercase"><i data-lucide="leaf" class="w-4 h-4"></i> CO₂ Prevented</div><p class="text-[28px] font-black mt-2" style="font-family:'Syne'" id="impact-co2-val">124.5 <span class="text-[12px]">kg</span></p></div>
+                <div class="glass-panel p-5 rounded-[22px] bg-[#FFF07A]"><div class="flex items-center gap-2 font-black text-[11px] uppercase"><i data-lucide="sparkles" class="w-4 h-4"></i> Gold Recovered</div><p class="text-[28px] font-black mt-2" style="font-family:'Syne'" id="impact-gold-val">0.185 <span class="text-[12px]">g</span></p></div>
+                <div class="glass-panel p-5 rounded-[22px] bg-[#D9CCFF]"><div class="flex items-center gap-2 font-black text-[11px] uppercase"><i data-lucide="droplet" class="w-4 h-4"></i> Water Saved</div><p class="text-[28px] font-black mt-2" style="font-family:'Syne'" id="impact-water-val">1,420 <span class="text-[12px]">L</span></p></div>
+                <div class="glass-panel p-5 rounded-[22px] bg-[#FFD2B3]"><div class="flex items-center gap-2 font-black text-[11px] uppercase"><i data-lucide="shield-check" class="w-4 h-4"></i> Toxic Avoided</div><p class="text-[28px] font-black mt-2" style="font-family:'Syne'" id="impact-ewaste-val">12.8 <span class="text-[12px]">kg</span></p></div>
+            </div>
+            <div class="space-y-3"><h3 class="font-black text-[18px] flex items-center gap-2" style="font-family:'Syne'"><i data-lucide="award" class="w-5 h-5"></i> Circular Badges & Achievements</h3><div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4" id="badges-grid"></div></div>
+            <div class="glass-panel p-6 rounded-[28px] space-y-4"><h3 class="font-black text-[18px] flex items-center gap-2" style="font-family:'Syne'"><i data-lucide="users" class="w-5 h-5"></i> Global Circularity Leaderboard</h3><div class="overflow-x-auto rounded-[18px] border-2 border-black overflow-hidden"><table class="w-full text-left text-[12px] font-bold"><thead class="bg-[#161616] text-[#FFFBF0] uppercase text-[10px]"><tr><th class="p-3">Rank</th><th class="p-3">User</th><th class="p-3">Gadgets</th><th class="p-3">CO₂</th><th class="p-3">Cash</th></tr></thead><tbody class="divide-y-2 divide-black bg-white"><tr class="bg-[#E8FF86]"><td class="p-3">#14 (You)</td><td class="p-3 flex items-center gap-1.5"><i data-lucide="user" class="w-3.5 h-3.5"></i> Active Citizen</td><td class="p-3" id="lb-user-gadgets">5 Gadgets</td><td class="p-3" id="lb-user-co2">124.5 kg</td><td class="p-3" id="lb-user-cash">$480</td></tr><tr><td class="p-3">#1 🥇</td><td class="p-3">EcoTech_Guru_Delhi</td><td class="p-3">84</td><td class="p-3">1,420 kg</td><td class="p-3">$4,250</td></tr><tr><td class="p-3">#2 🥈</td><td class="p-3">ZeroWaste_Maya</td><td class="p-3">62</td><td class="p-3">980 kg</td><td class="p-3">$3,120</td></tr><tr><td class="p-3">#3 🥉</td><td class="p-3">CircuitBreaker_99</td><td class="p-3">45</td><td class="p-3">720 kg</td><td class="p-3">$2,400</td></tr></tbody></table></div></div>
+        </section>
+        <section id="tab-locator" class="tab-content hidden space-y-6">
+            <div class="glass-panel p-6 rounded-[28px] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div><h2 class="text-[28px] font-extrabold flex items-center gap-2 tracking-[-0.03em]" style="font-family:'Syne'"><span class="w-10 h-10 rounded-full bg-[#A6FFDF] border-2 border-black grid place-items-center shadow-[3px_3px_0_#161616]"><i data-lucide="map-pin" class="w-5 h-5"></i></span> Certified Hubs</h2><p class="text-[12px] text-[#6B6258] mt-1">Verified R2/CPCB recyclers & repair besties near you. Touch grass, drop e-waste.</p></div>
+                <span class="sticker !bg-[#A6FFDF]">Verified Hubs ✔️</span>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-6 space-y-4">
+                    <div class="flex gap-2"><input id="hub-search-input" type="text" placeholder="Search city, pincode..." class="flex-1 px-4 py-2.5 rounded-full border-2 border-black font-bold text-[13px] shadow-[3px_3px_0_#161616]"><button onclick="searchHubs()" class="bubbly px-5 py-2.5 bg-[#161616] text-white text-xs">Search</button></div>
+                    <div id="hubs-list-container" class="space-y-3"></div>
+                </div>
+                <div class="lg:col-span-6"><div class="glass-panel p-2 rounded-[28px] h-[560px] overflow-hidden"><div id="hubs-map-placeholder" class="w-full h-full rounded-[20px] bg-[#FFFBF0] border-2 border-black border-dashed grid place-items-center text-center p-6"><div><div class="w-16 h-16 rounded-full bg-[#D9CCFF] border-2 border-black mx-auto grid place-items-center shadow-[4px_4px_0_#161616] mb-3"><i data-lucide="map" class="w-8 h-8"></i></div><p class="font-black" style="font-family:'Syne'">Map View</p><p class="text-[12px] text-[#6B6258] mt-1">Interactive map would load here with pins. For demo, list view on left is live.</p><button onclick="switchTab('chat')" class="bubbly mt-4 px-4 py-2 bg-[#D9CCFF] text-xs">Chat with recycler instead →</button></div></div></div></div>
+            </div>
+        </section>
+        <section id="tab-shop" class="tab-content hidden space-y-6">
+            <div class="glass-panel p-6 rounded-[28px] flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#FFF07A] !shadow-[7px_7px_0_#161616]">
+                <div><h2 class="text-[32px] font-extrabold tracking-[-0.04em]" style="font-family:'Syne'">Reckles Shop 🛍️</h2><p class="text-[13px] font-bold mt-1">Turn your eco actions into drip. Redeem Reckles for vouchers, repair kits, and more.</p></div>
+                <div class="flex items-center gap-3 bg-white border-2 border-black rounded-full px-4 py-2 shadow-[4px_4px_0_#161616]"><span class="reckles-coin w-8 h-8 text-[13px]">R</span><div><p class="text-[10px] font-black uppercase opacity-60">Your balance</p><p class="font-black text-[18px]" style="font-family:'Syne'"><span data-reckles-balance>520</span> Reckles</p></div></div>
+            </div>
+            <div class="spark-feature-grid" id="spark-shop-grid"></div>
+        </section>
+        <section id="tab-admin" class="tab-content hidden space-y-6">
+            <div class="glass-panel p-6 rounded-[28px] flex flex-col md:flex-row justify-between gap-4">
+                <div><h2 class="text-[28px] font-extrabold tracking-[-0.04em]" style="font-family:'Syne'">Admin View 👩‍💻</h2><p class="text-[12px] text-[#6B6258] mt-1">Debug & activity log for this browser. LocalStorage + Firebase.</p></div>
+                <div class="flex gap-2"><button id="spark-export-activity" class="bubbly px-4 py-2 bg-white text-xs">Export CSV</button><button id="spark-clear-activity" class="bubbly px-4 py-2 bg-[#FF4D4D] text-white text-xs">Clear Log</button></div>
+            </div>
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                <div class="glass-panel p-4 rounded-[20px] text-center"><p class="text-[10px] font-black uppercase opacity-60">Balance</p><p class="text-[22px] font-black" id="spark-admin-balance">520</p></div>
+                <div class="glass-panel p-4 rounded-[20px] text-center"><p class="text-[10px] font-black uppercase opacity-60">Scans</p><p class="text-[22px] font-black" id="spark-admin-scans">0</p></div>
+                <div class="glass-panel p-4 rounded-[20px] text-center"><p class="text-[10px] font-black uppercase opacity-60">Purchases</p><p class="text-[22px] font-black" id="spark-admin-purchases">0</p></div>
+                <div class="glass-panel p-4 rounded-[20px] text-center"><p class="text-[10px] font-black uppercase opacity-60">Vault Items</p><p class="text-[22px] font-black" id="spark-admin-vault">0</p></div>
+                <div class="glass-panel p-4 rounded-[20px] text-center"><p class="text-[10px] font-black uppercase opacity-60">Total Logs</p><p class="text-[22px] font-black" id="spark-admin-activity-total">0</p></div>
+            </div>
+            <div class="glass-panel rounded-[24px] overflow-hidden">
+                <div class="overflow-x-auto"><table class="w-full text-left text-[12px]"><thead class="bg-[#161616] text-white uppercase text-[10px] font-black"><tr><th class="p-3">Time</th><th class="p-3">Activity</th><th class="p-3">Details</th><th class="p-3">Reckles</th></tr></thead><tbody id="spark-admin-rows" class="divide-y divide-[#EDE6DA] bg-white"></tbody></table></div>
+            </div>
+        </section>
+    </main>
+    <div id="buyback-modal" class="fixed inset-0 bg-[#161616]/80 backdrop-blur-[8px] z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-md w-full p-6 rounded-[28px] space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b-2 border-black border-dashed pb-3"><h3 class="font-black text-[16px] flex items-center gap-2" style="font-family:'Syne'"><span class="w-8 h-8 rounded-full bg-[#E8FF86] border-2 border-black grid place-items-center"><i data-lucide="banknote" class="w-4 h-4"></i></span> Lock Buyback Price</h3><button onclick="closeModal('buyback-modal')" class="w-8 h-8 rounded-full bg-white border-2 border-black grid place-items-center"><i data-lucide="x" class="w-4 h-4"></i></button></div>
+            <div class="bg-[#FFFBF0] p-4 rounded-[18px] border-2 border-black space-y-2"><p class="text-[12px] font-bold">Locking price for <span id="buyback-device-name" class="bg-[#E8FF86] px-2 py-0.5 rounded-full border border-black">iPhone X</span></p><p class="text-[11px] text-[#6B6258]">7-day price lock. Free pickup. Instant UPI payment.</p></div>
+            <div class="space-y-3 text-[12px]"><div><label class="block font-black mb-1">Full Name</label><input type="text" placeholder="Alex Morgan" class="w-full bg-white border-2 border-black rounded-full p-2.5 text-[13px] font-bold shadow-[3px_3px_0_#161616]"></div><div><label class="block font-black mb-1">Pickup Address / Phone</label><input type="text" placeholder="+1 (555) 019-2831 / City" class="w-full bg-white border-2 border-black rounded-full p-2.5 text-[13px] font-bold shadow-[3px_3px_0_#161616]"></div></div>
+            <button onclick="confirmBuybackLock()" class="bubbly w-full py-3 bg-[#E8FF86] text-xs flex items-center justify-center gap-1.5"><i data-lucide="check-circle" class="w-4 h-4"></i> Confirm 7-Day Price Lock</button>
+        </div>
+    </div>
+    <div id="recycle-modal" class="fixed inset-0 bg-[#161616]/80 backdrop-blur-[8px] z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-lg w-full p-6 rounded-[28px] space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b-2 border-black border-dashed pb-3"><h3 class="font-black text-[16px] flex items-center gap-2" style="font-family:'Syne'"><span class="w-8 h-8 rounded-full bg-[#FFD2B3] border-2 border-black grid place-items-center"><i data-lucide="truck" class="w-4 h-4"></i></span> CPCB Pickup</h3><button onclick="closeModal('recycle-modal')" class="w-8 h-8 rounded-full bg-white border-2 border-black grid place-items-center"><i data-lucide="x" class="w-4 h-4"></i></button></div>
+            <div class="grid grid-cols-2 gap-3 text-[12px]"><div><label class="block font-bold mb-1">Pickup Date</label><input type="date" id="recycle-date" class="w-full bg-white border-2 border-black rounded-full p-2.5 font-bold"></div><div><label class="block font-bold mb-1">Time Slot</label><select class="w-full bg-white border-2 border-black rounded-full p-2.5 font-bold"><option>Morning (10-13)</option><option>Afternoon (14-17)</option></select></div></div>
+            <div class="space-y-2 text-[12px]"><label class="block font-bold">Pickup Address</label><input type="text" placeholder="House No, Street, Landmark..." class="w-full bg-white border-2 border-black rounded-full p-2.5 font-bold"></div>
+            <div class="p-4 rounded-[18px] bg-[#161616] text-[#FFFBF0] border-2 border-black space-y-2 relative" id="certificate-preview-box"><div class="flex items-center justify-between border-b border-white/20 pb-2"><div class="flex items-center gap-1.5 text-[#E8FF86] text-[11px] font-black"><i data-lucide="shield-check" class="w-4 h-4"></i> CPCB / R2 DISPOSAL CERTIFICATE</div><span class="text-[9px] font-mono bg-white text-black px-2 py-0.5 rounded-full">REF: CPCB-2026-8842</span></div><p class="text-[11px]">Certifies zero-landfill recycling for: <strong class="bg-[#E8FF86] text-black px-2 py-0.5 rounded-full" id="cert-device-name">iPhone X</strong></p></div>
+            <button onclick="confirmRecyclePickup()" class="bubbly w-full py-3 bg-[#FFD2B3] text-xs flex items-center justify-center gap-1.5"><i data-lucide="check" class="w-4 h-4"></i> Schedule Pickup & Generate Certificate</button>
+        </div>
+    </div>
+    <div id="apikey-modal" class="fixed inset-0 bg-[#161616]/80 backdrop-blur-[8px] z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-md w-full p-6 rounded-[28px] space-y-4">
+            <div class="flex justify-between items-center border-b-2 border-black border-dashed pb-3"><h3 class="font-black text-[16px] flex items-center gap-2" style="font-family:'Syne'"><span class="w-8 h-8 rounded-full bg-[#D9CCFF] border-2 border-black grid place-items-center"><i data-lucide="key" class="w-4 h-4"></i></span> Gemini Vision</h3><button onclick="closeModal('apikey-modal')" class="w-8 h-8 rounded-full bg-white border-2 border-black grid place-items-center"><i data-lucide="x" class="w-4 h-4"></i></button></div>
+            <p class="text-[12px] text-[#6B6258] leading-snug">Add your Google Gemini API key for real-time vision diagnostics. Leave blank to use offline fallback engine (still slaps).</p>
+            <div><label class="block text-[11px] font-black uppercase mb-1">Gemini API Key:</label><input type="password" id="gemini-api-key-input" placeholder="AIzaSy..." class="w-full bg-white border-2 border-black rounded-full p-3 text-[12px] font-mono font-bold shadow-[3px_3px_0_#161616]"></div>
+            <div class="flex items-center justify-between pt-2"><button onclick="saveApiKey()" class="bubbly px-5 py-2.5 bg-[#E8FF86] text-xs">Save Key</button><button onclick="clearApiKey()" class="bubbly px-4 py-2.5 bg-white text-[#FF4D4D] text-xs">Clear Key</button></div>
+        </div>
+    </div>
+    <div id="manual-gadget-modal" class="fixed inset-0 bg-[#161616]/80 backdrop-blur-[8px] z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-md w-full p-6 rounded-[28px] space-y-4"><div class="flex justify-between items-center"><h3 class="font-black" style="font-family:'Syne'">Add Gadget Manually</h3><button onclick="closeModal('manual-gadget-modal')" class="w-8 h-8 rounded-full bg-white border-2 border-black grid place-items-center"><i data-lucide="x" class="w-4 h-4"></i></button></div><div class="space-y-3 text-[12px]"><input id="manual-model" placeholder="Model e.g. iPhone 13" class="w-full bg-white border-2 border-black rounded-full p-2.5 font-bold"><input id="manual-brand" placeholder="Brand e.g. Apple" class="w-full bg-white border-2 border-black rounded-full p-2.5 font-bold"><input id="manual-value" type="number" placeholder="Resell Value USD" class="w-full bg-white border-2 border-black rounded-full p-2.5 font-bold"></div><button onclick="addManualGadget()" class="bubbly w-full py-3 bg-[#161616] text-white text-xs">Add to Drawer</button></div>
+    </div>
+    <footer class="relative z-[5] border-t-2 border-black bg-[#161616] py-8 text-[12px] text-[#FFFBF0]/70 font-bold mt-10">
+        <div class="max-w-[1320px] mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-2"><span class="w-8 h-8 rounded-full bg-[#E8FF86] border-2 border-[#FFFBF0] grid place-items-center text-black"><i data-lucide="shield-check" class="w-4 h-4"></i></span><span>SPARK • CPCB & R2 Compliant 4R Engine Matrix • built for Gen Z • Firebase secured</span></div>
+            <div class="flex items-center gap-2"><span class="sticker !bg-[#FFFBF0] !text-black !py-1">Gemini 3 Flash Vision + Firebase</span><span class="text-[10px] opacity-50">Made with ♻️ in India</span></div>
+        </div>
+    </footer>
+    <script src="script.js"></script>
+    <script type="module">
+        import { initializeApp } from "firebase/app";
+        import { getAnalytics } from "firebase/analytics";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
+        import { getFirestore, doc, setDoc, getDoc, collection, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, updateDoc, getDocs } from "firebase/firestore";
+        const firebaseConfig = {
+            apiKey: "AIzaSyD-sxYZarwWUMAv4JPrXEKE95uwf19yahg",
+            authDomain: "spark-67.firebaseapp.com",
+            projectId: "spark-67",
+            storageBucket: "spark-67.firebasestorage.app",
+            messagingSenderId: "382727385758",
+            appId: "1:382727385758:web:232e506113ae352618818f",
+            measurementId: "G-F13HXMB2WZ"
+        };
+        const app = initializeApp(firebaseConfig);
+        let analytics; try{ analytics=getAnalytics(app);}catch(e){}
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        window.firebaseAuth = auth;
+        window.firebaseDb = db;
+        window._fb = { doc, setDoc, getDoc, collection, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, updateDoc, getDocs };
+        // Theme handling
+        function getSavedTheme(){ return localStorage.getItem('spark_theme') || 'genz'; }
+        function applyTheme(theme){
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('spark_theme', theme);
+            if(window.lucide) lucide.createIcons();
+        }
+        window.applyTheme = applyTheme;
+        window.toggleTheme = function(){
+            const cur = document.documentElement.getAttribute('data-theme') || getSavedTheme();
+            const next = cur === 'genz' ? 'light' : 'genz';
+            applyTheme(next);
+            // if logged in, update firestore
+            const user = auth.currentUser;
+            if(user){
+                const userRef = doc(db, 'users', user.uid);
+                updateDoc(userRef, { preferredTheme: next }).catch(()=>{});
+            }
+            if(window.confetti){
+                confetti({ particleCount: 40, spread:60, origin:{y:.8}, colors:['#E8FF86','#D9CCFF','#FFD2B3'], scalar:1.1 });
+            }
+        };
+        window.selectSignupTheme = function(theme){
+            document.getElementById('signup-theme').value = theme;
+            document.querySelectorAll('.theme-option').forEach(el=>{
+                el.classList.toggle('selected', el.dataset.theme===theme);
+            });
+        };
+        applyTheme(getSavedTheme());
+        // Auth tabs
+        window.switchAuthTab = function(tab){
+            document.getElementById('login-form').classList.toggle('hidden', tab!=='login');
+            document.getElementById('signup-form').classList.toggle('hidden', tab!=='signup');
+            document.getElementById('tab-login-btn').classList.toggle('active', tab==='login');
+            document.getElementById('tab-signup-btn').classList.toggle('active', tab==='signup');
+            if(window.lucide) lucide.createIcons();
+        };
+        // Password strength - SPARK special rule
+        window.checkPasswordStrength = function(pw){
+            const fill = document.getElementById('pw-fill');
+            const label = document.getElementById('pw-label');
+            const hint = document.getElementById('pw-hint');
+            if(!fill) return 0;
+            let score = 0;
+            const checks = {
+                length: pw.length >= 8,
+                upper: /[A-Z]/.test(pw),
+                lower: /[a-z]/.test(pw),
+                number: /[0-9]/.test(pw),
+                symbol: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pw)
+            };
+            score = Object.values(checks).filter(Boolean).length;
+            // extra spark rule: not containing common
+            if(pw.length >=12) score++;
+            
+            let width = (score/6)*100;
+            let color = '#FF4D4D';
+            let text = 'WEAK';
+            if(score<=2){ color='#FF4D4D'; text='WEAK • needs more'; }
+            else if(score===3){ color='#FF8A4A'; text='MID • almost'; width=55; }
+            else if(score===4){ color='#FFD93D'; text='GOOD • keep going'; width=75; }
+            else if(score>=5){ color='#2FE1A5'; text='SPARK STRONG 🔐✨'; width=100; }
+            
+            fill.style.width = width+'%';
+            fill.style.background = color;
+            label.textContent = text;
+            label.style.color = color;
+            let missing = [];
+            if(!checks.length) missing.push('8+ chars');
+            if(!checks.upper) missing.push('uppercase A-Z');
+            if(!checks.lower) missing.push('lowercase a-z');
+            if(!checks.number) missing.push('number 0-9');
+            if(!checks.symbol) missing.push('symbol !@#$');
+            if(missing.length) hint.textContent = 'Missing: ' + missing.join(', ') + ' • SPARK password must be unique to this site 🔐';
+            else hint.textContent = 'SPARK STRONG! This password is specially crafted for SPARK — do NOT reuse elsewhere ✨';
+            return score;
+        };
+        function validateSparkPassword(pw, username, email){
+            if(pw.length < 8) return 'Password must be at least 8 characters for SPARK security';
+            if(!/[A-Z]/.test(pw)) return 'Include at least 1 uppercase letter (A-Z)';
+            if(!/[a-z]/.test(pw)) return 'Include at least 1 lowercase letter (a-z)';
+            if(!/[0-9]/.test(pw)) return 'Include at least 1 number';
+            if(!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pw)) return 'Include at least 1 special symbol (!@#$% etc) — SPARK special rule';
+            const lowerPw = pw.toLowerCase();
+            if(username && lowerPw.includes(username.toLowerCase())) return 'Password cannot contain your username — make it SPARK-unique';
+            if(email){
+                const local = email.split('@')[0].toLowerCase();
+                if(local.length>=3 && lowerPw.includes(local)) return 'Password cannot contain your email name';
+            }
+            const common = ['password','123456','qwerty','spark','12345678'];
+            if(common.includes(lowerPw)) return 'Too common — create a SPARK-only strong password';
+            return null;
+        }
+        // Signup
+        window.handleSignup = async function(e){
+            e.preventDefault();
+            const name = document.getElementById('signup-name').value.trim();
+            const username = document.getElementById('signup-username').value.trim();
+            const email = document.getElementById('signup-email').value.trim();
+            const pw = document.getElementById('signup-password').value;
+            const confirm = document.getElementById('signup-confirm').value;
+            const theme = document.getElementById('signup-theme').value || 'genz';
+            const errEl = document.getElementById('signup-error');
+            const btn = document.getElementById('signup-submit');
+            errEl.classList.add('hidden');
+            if(pw !== confirm){ errEl.textContent='Passwords do not match'; errEl.classList.remove('hidden'); return; }
+            const pwErr = validateSparkPassword(pw, username, email);
+            if(pwErr){ errEl.textContent=pwErr; errEl.classList.remove('hidden'); return; }
+            btn.disabled=true; btn.textContent='Creating...';
+            try{
+                const cred = await createUserWithEmailAndPassword(auth, email, pw);
+                const uid = cred.user.uid;
+                // check username uniqueness
+                const q = query(collection(db,'users'), where('username','==', username));
+                const snap = await getDocs(q);
+                if(!snap.empty && snap.docs[0].id !== uid){
+                    throw new Error('Username already taken — try another');
+                }
+                await setDoc(doc(db,'users', uid), {
+                    name, username, email, preferredTheme: theme,
+                    role: 'user',
+                    createdAt: serverTimestamp(),
+                    reckles: 520
+                });
+                applyTheme(theme);
+                // success
+            }catch(err){
+                errEl.textContent = err.message.replace('Firebase:','').trim();
+                errEl.classList.remove('hidden');
+            }finally{
+                btn.disabled=false; btn.textContent='Create Account ✨';
+            }
+        };
+        // Login
+        window.handleLogin = async function(e){
+            e.preventDefault();
+            const email = document.getElementById('login-email').value.trim();
+            const pw = document.getElementById('login-password').value;
+            const errEl = document.getElementById('login-error');
+            const btn = document.getElementById('login-submit');
+            errEl.classList.add('hidden');
+            btn.disabled=true; btn.textContent='Logging in...';
+            try{
+                await signInWithEmailAndPassword(auth, email, pw);
+            }catch(err){
+                errEl.textContent = err.message.replace('Firebase:','').replace('auth/','').trim();
+                errEl.classList.remove('hidden');
+            }finally{
+                btn.disabled=false; btn.textContent='Log In →';
+            }
+        };
+        window.handleLogout = async function(){
+            await signOut(auth);
+        };
+        // Auth state
+        onAuthStateChanged(auth, async (user)=>{
+            const authScreen = document.getElementById('auth-screen');
+            const userChipContainer = document.getElementById('user-chip-container');
+            if(user){
+                authScreen.classList.add('hidden');
+                // get user doc
+                try{
+                    const userDoc = await getDoc(doc(db,'users', user.uid));
+                    let data = userDoc.exists() ? userDoc.data() : null;
+                    if(data && data.preferredTheme) applyTheme(data.preferredTheme);
+                    const displayName = data?.name || user.email.split('@')[0];
+                    const initial = displayName.charAt(0).toUpperCase();
+                    userChipContainer.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <button class="theme-toggle" onclick="toggleTheme()" title="Switch theme"><i data-lucide="palette" class="w-4 h-4"></i></button>
+                            <div class="user-chip" onclick="handleLogout()" title="Click to logout">
+                                <div class="avatar-fallback">${initial}</div>
+                                <span>${displayName}</span>
+                                <i data-lucide="log-out" class="w-3 h-3 opacity-60"></i>
+                            </div>
+                        </div>
+                    `;
+                }catch{
+                    userChipContainer.innerHTML = `<button class="bubbly px-3 py-1.5 bg-white text-[11px]" onclick="handleLogout()">Logout</button>`;
+                }
+                initChatForUser(user);
+                if(window.lucide) lucide.createIcons();
+            }else{
+                authScreen.classList.remove('hidden');
+                userChipContainer.innerHTML='';
+                applyTheme(getSavedTheme());
+            }
+        });
+        // ============ CHAT LOGIC ============
+        let currentChatId = null;
+        let currentChatContact = null;
+        let unsubscribeMessages = null;
+        let currentUser = null;
+        // Predefined certified recyclers/admins - fallback if no users in DB
+        const defaultRecyclers = [
+            { uid:'admin_1', name:'EcoCycle Delhi', username:'ecocycle_delhi', role:'recycler', email:'ecocycle@cpcb.in', verified:true, city:'Delhi' },
+            { uid:'admin_2', name:'GreenLoop Mumbai', username:'greenloop_mumbai', role:'recycler', email:'greenloop@cpcb.in', verified:true, city:'Mumbai' },
+            { uid:'admin_3', name:'CPCB Admin Support', username:'cpcb_admin', role:'admin', email:'support@spark-67.firebaseapp.com', verified:true, city:'Central' }
+        ];
+        async function fetchRecyclers(){
+            try{
+                const q = query(collection(db,'users'), where('role','in',['admin','recycler']));
+                const snap = await getDocs(q);
+                let list = [];
+                snap.forEach(d=>{ const data=d.data(); list.push({ uid:d.id, ...data }); });
+                if(list.length===0) return defaultRecyclers;
+                // merge with defaults to ensure at least 3
+                const ids = new Set(list.map(l=>l.uid));
+                defaultRecyclers.forEach(def=>{ if(!ids.has(def.uid)) list.push(def); });
+                return list;
+            }catch{
+                return defaultRecyclers;
+            }
+        }
+        window.initChatForUser = async function(user){
+            currentUser = user;
+            const contactsList = document.getElementById('chat-contacts-list');
+            if(!contactsList) return;
+            contactsList.innerHTML = '<p class="text-[11px] font-bold opacity-60 p-2">Loading recyclers...</p>';
+            const recyclers = await fetchRecyclers();
+            contactsList.innerHTML = recyclers.map(r=>`
+                <div class="chat-contact" data-uid="${r.uid}" onclick="openChat('${r.uid}', '${r.name.replace(/'/g,"\\'")}', '${r.role}')">
+                    <div class="contact-avatar" style="background:${r.role==='admin'?'#E8FF86':'#D9CCFF'}">${r.name.charAt(0).toUpperCase()}</div>
+                    <div class="flex-1">
+                        <p class="font-black text-[12px] leading-tight">${r.name} ${r.verified?'✔️':''}</p>
+                        <p class="text-[10px] opacity-70">${r.role} • ${r.city||'India'} • CPCB verified</p>
+                    </div>
+                    <span class="w-2 h-2 bg-[#2FE1A5] rounded-full border border-black"></span>
+                </div>
+            `).join('');
+            // recent chats
+            loadRecentChats(user.uid);
+            if(window.lucide) lucide.createIcons();
+        };
+        window.filterChatContacts = function(val){
+            const term = val.toLowerCase();
+            document.querySelectorAll('.chat-contact').forEach(el=>{
+                const text = el.innerText.toLowerCase();
+                el.style.display = text.includes(term) ? 'flex' : 'none';
+            });
+        };
+        window.openChat = async function(contactUid, contactName, contactRole){
+            if(!currentUser) return;
+            // build chatId deterministic
+            const ids = [currentUser.uid, contactUid].sort();
+            const chatId = ids.join('_');
+            currentChatId = chatId;
+            currentChatContact = { uid: contactUid, name: contactName, role: contactRole };
+            // highlight active
+            document.querySelectorAll('.chat-contact').forEach(el=>{
+                el.classList.toggle('active', el.dataset.uid===contactUid);
+            });
+            document.getElementById('chat-active-name').textContent = contactName;
+            document.getElementById('chat-active-sub').textContent = `${contactRole} • CPCB certified • online`;
+            const messagesEl = document.getElementById('chat-messages');
+            messagesEl.innerHTML = '<p class="text-[11px] font-bold opacity-60 p-4">Loading messages...</p>';
+            // ensure chat doc exists
+            const chatRef = doc(db, 'chats', chatId);
+            try{
+                const chatSnap = await getDoc(chatRef);
+                if(!chatSnap.exists()){
+                    await setDoc(chatRef, {
+                        participants: [currentUser.uid, contactUid],
+                        participantNames: { [currentUser.uid]: currentUser.email, [contactUid]: contactName },
+                        lastMessage: '',
+                        updatedAt: serverTimestamp(),
+                        createdAt: serverTimestamp()
+                    });
+                }
+            }catch(e){ console.log('chat init error', e); }
+            // unsubscribe previous
+            if(unsubscribeMessages) unsubscribeMessages();
+            const messagesQuery = query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp','asc'));
+            unsubscribeMessages = onSnapshot(messagesQuery, (snap)=>{
+                if(snap.empty){
+                    messagesEl.innerHTML = `
+                        <div class="chat-empty">
+                            <div>
+                                <div class="w-14 h-14 rounded-full bg-[#E8FF86] border-2 border-black mx-auto grid place-items-center shadow-[3px_3px_0_#161616] mb-2"><i data-lucide="sparkles" class="w-6 h-6"></i></div>
+                                <p class="font-black text-[13px]">Start conversation with ${contactName}</p>
+                                <p class="text-[11px] opacity-60 mt-1">Ask about pickup slots, pricing, CPCB certificate. Firebase real-time.</p>
+                            </div>
+                        </div>
+                    `;
+                    if(window.lucide) lucide.createIcons();
+                    return;
+                }
+                messagesEl.innerHTML = '';
+                snap.forEach(docSnap=>{
+                    const m = docSnap.data();
+                    const isMe = m.senderId === currentUser.uid;
+                    const time = m.timestamp?.toDate ? m.timestamp.toDate().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'now';
+                    const div = document.createElement('div');
+                    div.className = 'msg ' + (isMe ? 'me' : 'them');
+                    div.innerHTML = `<div>${escapeHtml(m.text)}</div><div class="msg-time">${time} • ${isMe?'You':contactName}</div>`;
+                    messagesEl.appendChild(div);
+                });
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            });
+        };
+        window.sendChatMessage = async function(){
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if(!text || !currentChatId || !currentUser) return;
+            input.value='';
+            try{
+                await addDoc(collection(db, 'chats', currentChatId, 'messages'), {
+                    senderId: currentUser.uid,
+                    text,
+                    timestamp: serverTimestamp()
+                });
+                await updateDoc(doc(db, 'chats', currentChatId), {
+                    lastMessage: text,
+                    updatedAt: serverTimestamp()
+                });
+            }catch(e){
+                console.error('send error', e);
+                alert('Failed to send: '+e.message);
+            }
+        };
+        window.clearChat = async function(){
+            if(!currentChatId) return;
+            if(!confirm('Clear this chat history?')) return;
+            try{
+                const q = query(collection(db, 'chats', currentChatId, 'messages'));
+                const snap = await getDocs(q);
+                // Note: for demo, we won't delete all docs one by one to avoid quota, just show cleared UI
+                document.getElementById('chat-messages').innerHTML = '<div class="chat-empty"><p class="font-bold text-[12px]">Chat cleared locally. Old messages still in Firebase (demo safety).</p></div>';
+            }catch(e){ console.error(e); }
+        };
+        async function loadRecentChats(uid){
+            try{
+                const q = query(collection(db,'chats'), where('participants','array-contains', uid), orderBy('updatedAt','desc'));
+                const snap = await getDocs(q);
+                const recentEl = document.getElementById('recent-chats');
+                if(!recentEl) return;
+                if(snap.empty){ recentEl.innerHTML='<p class="text-[10px] opacity-60">No recent chats yet</p>'; return; }
+                let html='';
+                snap.forEach(d=>{
+                    const data=d.data();
+                    const otherId = data.participants.find(p=>p!==uid);
+                    const name = data.participantNames?.[otherId] || otherId;
+                    html+=`<div class="text-[11px] font-bold p-2 rounded-full bg-white border border-black cursor-pointer" onclick="document.querySelector('[data-uid=\\'${otherId}\\']')?.click()">${escapeHtml(name)} • ${escapeHtml(data.lastMessage||'').slice(0,24)}</div>`;
+                });
+                recentEl.innerHTML=html;
+            }catch(e){ console.log('recent error', e); }
+        }
+        function escapeHtml(str){
+            return String(str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+        // Original tab switch patch kept from previous
+        const origSwitchTab = window.switchTab;
+        window.switchTab = function(tabId){
+            document.querySelectorAll('.nav-btn').forEach(b=> b.classList.remove('active'));
+            const btn = document.getElementById('nav-'+tabId);
+            if(btn) btn.classList.add('active');
+            if(typeof origSwitchTab === 'function'){
+                origSwitchTab(tabId);
+                document.querySelectorAll('.nav-btn').forEach(b=>{
+                    b.classList.remove('text-brand-400','bg-brand-500/10','border','border-brand-500/30','font-semibold','text-slate-400');
+                    if(b.id === 'nav-'+tabId) b.classList.add('active');
+                });
+                const content = document.getElementById('tab-'+tabId);
+                if(content){ content.classList.remove('hidden'); }
+            }
+            if(window.lucide) lucide.createIcons();
+            if((tabId==='shop' || tabId==='impact' || tabId==='chat') && window.confetti){
+                confetti({ particleCount: 60, spread: 70, origin:{ y:.7 }, colors:['#E8FF86','#D9CCFF','#FFD2B3','#A6FFDF','#FFF07A'], scalar:1.2 });
+            }
+            window.scrollTo({top:0, behavior:'smooth'});
+        };
+        document.addEventListener('mousemove', (e)=>{
+            const orbs = document.querySelectorAll('.orb-3d');
+            const x = (e.clientX / window.innerWidth - 0.5) * 20;
+            const y = (e.clientY / window.innerHeight - 0.5) * 20;
+            orbs.forEach((orb,i)=>{
+                const factor = (i+1)*0.6;
+                orb.style.transform = `translate3d(${x*factor}px, ${y*factor}px, 0) rotateX(${ -y*0.5}deg) rotateY(${x*0.5}deg)`;
+            });
+        });
+    </script>
+</body>
+</html>
